@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>folder.png</file>
+        <file>delete.png</file>
+        <file>sort.png</file>
+    </qresource>
+</RCC>
