@@ -53,6 +53,7 @@ class MWindow : public QMainWindow {
 		void saveLeaf(QTreeWidgetItem*,QBuffer*);
 
 		int getCurrentRow();
+		QTreeWidgetItem* getCurrentParent();
 
 		void loadVer4(QByteArray&, QTreeWidgetItem*);
 		void loadVer5(QByteArray&, QTreeWidgetItem*);
@@ -63,7 +64,7 @@ class MWindow : public QMainWindow {
 		void jumpLine(QAction*);
 
 		void appendCbrd();
-		void changePage(QTreeWidgetItem*);
+		void changePage();
 		void changeRow(QItemSelection);
 		void changeSrc(QString);
 		void changeTrn(QString);

@@ -17,7 +17,6 @@ MWindow::MWindow() {
 	ui.setupUi(this);
 	model = new TBModel;
 	ui.table->setModel(model);
-//	ui.transtab->setVisible(false);
 
 	QTableView* tab = ui.table;
 	tab->setColumnWidth(0,20);
@@ -50,14 +49,13 @@ MWindow::MWindow() {
 	connect(ui.srcname,SIGNAL(textChanged(QString)),this,SLOT(changeSNm(QString)));
 	connect(ui.trnname,SIGNAL(textChanged(QString)),this,SLOT(changeTNm(QString)));
 
-	connect(ui.tree,SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),this,SLOT(changePage(QTreeWidgetItem*)));
+	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
-//	connect(ui.transtab->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(transRow(QItemSelection)));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
-//	connect(ui.transline,SIGNAL(textChanged(QString)),this,SLOT(translate(QString)));
 
 	ui.tree->addAction(ui.actNewDir);
+	ui.tree->addAction(ui.actNewPage);
 	ui.tree->addAction(ui.actSort);
 	ui.tree->addAction(ui.actChangeIcon);
 	ui.tree->addAction(ui.actDelPage);
@@ -314,9 +312,13 @@ void MWindow::changeIcon() {
 }
 
 void MWindow::delPage() {
-	if (curItem == NULL) return;
-	if (!askSure("Delete element?")) return;
-	delItem(curItem);
+	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
+	if (items.isEmpty()) return;
+	if (!askSure("Delete selected element(s)?")) return;
+	QTreeWidgetItem* itm;
+	foreach(itm, items) {
+		delItem(itm);
+	}
 }
 
 void MWindow::delItem(QTreeWidgetItem* item) {
@@ -416,25 +418,32 @@ void MWindow::disableTab() {
 	ui.table->update();
 }
 
-void MWindow::changePage(QTreeWidgetItem* itm) {
-	int id;
-	curItem = itm;
-	if (itm) {
-		id = itm->data(0,Qt::UserRole).toInt();
-		if (id != 0) {
-			setPage(id);
-			ui.tabs->setEnabled(true);
-			setEdit(true);
-			ui.table->scrollToTop();
-			ui.table->selectionModel()->clear();
-			setEdit(false);
+void MWindow::changePage() {
+	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
+	if (rws.size() != 1) {
+		curPage = NULL;
+		disableTab();
+	} else {
+		QTreeWidgetItem* itm = ui.tree->currentItem();
+		int id;
+		curItem = itm;
+		if (itm) {
+			id = itm->data(0,Qt::UserRole).toInt();
+			if (id != 0) {
+				setPage(id);
+				ui.tabs->setEnabled(true);
+				setEdit(true);
+				ui.table->scrollToTop();
+				ui.table->selectionModel()->clear();
+				setEdit(false);
+			} else {
+				curPage = NULL;
+				disableTab();
+			}
 		} else {
 			curPage = NULL;
 			disableTab();
 		}
-	} else {
-		curPage = NULL;
-		disableTab();
 	}
 	model->update();
 	fillSJMenu();
@@ -1207,71 +1216,26 @@ void MWindow::openSrc() {
 	if (pages.size() == 0) return;
 	TPage page;
 	TPage* pg;
-	QTreeWidgetItem* par = ui.tree->currentItem();
-	if (par) {
-		if (par->data(0,Qt::UserRole).toInt() != 0)
-			par = par->parent();
-	}
+	QTreeWidgetItem* par = getCurrentParent();
 	foreach(page, pages) {
 		pg = addPage(page);
 		addItem(par, page.name, pg->id);
 	}
-
-/*
-	QFileDialog qfd;
-	qfd.setNameFilters(QStringList() << "Text files (*)"
-			   << "EAGLS script(*)"
-			   << "KS files (*.ks)"
-			   << "Abelsoft script ADV (*.adv)"
-			   << "Enmon script ENM (*.enm)"
-			   << "SNX engine (*.snx)"
-			   );
-	qfd.setWindowTitle("Open sources");
-	qfd.setFileMode(QFileDialog::ExistingFiles);
-	if (!qfd.exec()) return;
-	QStringList paths = qfd.selectedFiles();
-	TPage page;
-	QString path;
-	QString name;
-	TPage* pg;
-	QTreeWidgetItem* par;
-	TPage(*callback)(QString) = NULL;
-	path = qfd.selectedNameFilter();
-	if (path.contains("Abelsoft")) callback = &loadAbelsoft;
-	if (path.contains("Enmon")) callback = &loadEnmon;
-	if (path.contains("KS files")) callback = &loadKS;
-	if (path.contains("EAGLS")) callback = &loadEAGLS;
-	if (path.contains("SNX")) callback = &loadSNX;
-
-	foreach(path,paths) {
-		if (callback) {
-			page = callback(path);
-		} else {
-			page = loadPage(path,TL_SRC);
-		}
-		if (page.id != 0) {
-			name = QFileInfo(path).baseName();
-			pg = addPage(page);
-			par = ui.tree->currentItem();
-			if (par) {
-				if (par->data(0,Qt::UserRole).toInt() != 0)
-					par = par->parent();
-			}
-			addItem(par,name,pg->id);
-		}
-	}
-*/
 }
 
-
-
-void MWindow::newDir() {
-	QString name = QTime::currentTime().toString("hhmmss");
-	QTreeWidgetItem* par = ui.tree->currentItem();
+QTreeWidgetItem* MWindow::getCurrentParent() {
+	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
+	QTreeWidgetItem* par = (rws.size() == 1) ? ui.tree->currentItem() : NULL;
 	if (par) {
 		if (par->data(0,Qt::UserRole).toInt() != 0)
 			par = par->parent();
 	}
+	return par;
+}
+
+void MWindow::newDir() {
+	QString name = QTime::currentTime().toString("hhmmss");
+	QTreeWidgetItem* par = getCurrentParent();
 	addItem(par,name,0);
 }
 
@@ -1279,8 +1243,7 @@ void MWindow::newDir() {
 
 TPage* MWindow::newPage() {
 	TPage* pg = createPage();
-	QTreeWidgetItem* par = NULL;
-	if (ui.tree->currentItem()) par = ui.tree->currentItem()->parent();
+	QTreeWidgetItem* par = getCurrentParent();
 	addItem(par,"",pg->id);
 	return pg;
 }
