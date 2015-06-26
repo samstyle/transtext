@@ -257,6 +257,16 @@
     <string>Insert source...</string>
    </property>
   </action>
+  <action name="actFindUntrn">
+   <property name="text">
+    <string>Find untranslated</string>
+   </property>
+  </action>
+  <action name="actMerge">
+   <property name="text">
+    <string>Merge</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>tree</tabstop>

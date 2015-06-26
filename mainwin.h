@@ -62,6 +62,7 @@ class MWindow : public QMainWindow {
 	private slots:
 		void tbContextMenu();
 		void jumpLine(QAction*);
+		void findUntrn();
 
 		void appendCbrd();
 		void changePage();
@@ -75,6 +76,7 @@ class MWindow : public QMainWindow {
 		void delPage();
 		void delItem(QTreeWidgetItem*);
 		void sortTree();
+		void mergePages();
 
 		void replace();
 

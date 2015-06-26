@@ -23,6 +23,10 @@
 
 #define	FL_HIDDEN	1
 
+#define LS_NONE		0
+#define	LS_UNTRN	1
+#define	LS_TRN		2
+
 struct TImage {
 	int id;
 	QString name;
@@ -71,5 +75,6 @@ TPage loadEAGLS(QString);
 TPage loadSRP(QString);
 
 void normLine(TLine&);
+int getLineStatus(TLine);
 
 #endif // BASE_H

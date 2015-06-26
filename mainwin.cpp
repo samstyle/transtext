@@ -57,15 +57,18 @@ MWindow::MWindow() {
 	ui.tree->addAction(ui.actNewDir);
 	ui.tree->addAction(ui.actNewPage);
 	ui.tree->addAction(ui.actSort);
-	ui.tree->addAction(ui.actChangeIcon);
+	ui.tree->addAction(ui.actMerge);
+	// ui.tree->addAction(ui.actChangeIcon);
 	ui.tree->addAction(ui.actDelPage);
 	connect(ui.actNewDir,SIGNAL(triggered()),this,SLOT(newDir()));
 	connect(ui.actDelPage,SIGNAL(triggered()),this,SLOT(delPage()));
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
-	connect(ui.actChangeIcon,SIGNAL(triggered()),this,SLOT(changeIcon()));
+	// connect(ui.actChangeIcon,SIGNAL(triggered()),this,SLOT(changeIcon()));
+	connect(ui.actMerge, SIGNAL(triggered()), this, SLOT(mergePages()));
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
+	tbMenu->addAction(ui.actFindUntrn);
 	tbMenu->addAction(ui.actReplace);
 	tbMenu->addAction(ui.actSplit);
 	tbMenu->addAction(ui.actDelRows);
@@ -75,7 +78,18 @@ MWindow::MWindow() {
 	connect(ui.actReplace,SIGNAL(triggered()),repwin,SLOT(show()));
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
+	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
+}
+
+void MWindow::findUntrn() {
+	if (!curPage) return;
+	for (int i = 0; i < curPage->text.size(); i++) {
+		if (getLineStatus(curPage->text.at(i)) == LS_UNTRN) {
+			ui.table->selectRow(i);
+			break;
+		}
+	}
 }
 
 void MWindow::tbContextMenu() {
@@ -321,6 +335,28 @@ void MWindow::delPage() {
 	}
 }
 
+void MWindow::mergePages() {
+	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
+	if (items.size() < 2) return;
+	int pid = items.first()->data(0, Qt::UserRole).toInt();
+	if (pid == 0) return;
+	TPage* par = findPage(pid);
+	TPage* pg;
+	items.removeFirst();
+	QTreeWidgetItem* itm;
+	int id;
+	foreach(itm, items) {
+		id = itm->data(0, Qt::UserRole).toInt();
+		if (id != 0) {
+			pg = findPage(id);
+			par->text.append(pg->text);
+			delItem(itm);
+		}
+	}
+	model->update();
+	setProgress();
+}
+
 void MWindow::delItem(QTreeWidgetItem* item) {
 	int id = item->data(0,Qt::UserRole).toInt();
 	if (id == 0) {
@@ -391,8 +427,7 @@ void MWindow::rowInsert(bool before) {
 	TLine line;
 	line.type = TL_TEXT;
 	line.flag = 0;
-	if (curRow < 0) return;
-	int row = before ? curRow : curRow + 1;
+	int row = (curRow < 0) ? 0 : (before ? curRow : curRow + 1);
 	curPage->text.insert(row,line);
 	model->insertRow(row);
 }

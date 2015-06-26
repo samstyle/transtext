@@ -569,18 +569,31 @@ TPage loadPage(QString fnam, int type) {
 	return page;
 }
 
+int getLineStatus(TLine line) {
+	int res = LS_NONE;
+	if (line.type == TL_TEXT) {
+		if (!(line.src.text.startsWith("[") ||
+			(line.src.text.startsWith("==")) ||
+			(line.flag & FL_HIDDEN) ||
+			(line.src.text.isEmpty() && line.src.name.isEmpty()))) {
+				res = LS_UNTRN;
+				if (line.src.text.isEmpty() || !line.trn.text.isEmpty())
+					res = LS_TRN;
+		}
+	}
+	return res;
+}
+
 void getCounts(TPage* page,int& trans, int& total) {
 	trans = 0;
 	total = 0;
 	foreach(TLine line, page->text) {
-		if (line.type == TL_TEXT) {
-			if (!(line.src.text.startsWith("[") ||
-				(line.src.text.startsWith("==")) ||
-				(line.flag & FL_HIDDEN) ||
-				(line.src.text.isEmpty() && line.src.name.isEmpty()))) {
+		switch(getLineStatus(line)) {
+			case LS_TRN:
+				trans++;
+			case LS_UNTRN:
 				total++;
-				if (line.src.text.isEmpty() || !line.trn.text.isEmpty()) trans++;
-			}
+				break;
 		}
 	}
 }
