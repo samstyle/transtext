@@ -3,5 +3,9 @@
         <file>folder.png</file>
         <file>delete.png</file>
         <file>sort.png</file>
+        <file>find.png</file>
+        <file>merge.png</file>
+        <file>split.png</file>
+        <file>newpage.png</file>
     </qresource>
 </RCC>
