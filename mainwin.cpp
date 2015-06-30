@@ -455,7 +455,7 @@ void MWindow::disableTab() {
 
 void MWindow::changePage() {
 	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
-	if (rws.size() != 1) {
+	if (rws.size() > 1) {
 		curPage = NULL;
 		disableTab();
 	} else {
@@ -465,12 +465,14 @@ void MWindow::changePage() {
 		if (itm) {
 			id = itm->data(0,Qt::UserRole).toInt();
 			if (id != 0) {
-				setPage(id);
-				ui.tabs->setEnabled(true);
-				setEdit(true);
-				ui.table->scrollToTop();
-				ui.table->selectionModel()->clear();
-				setEdit(false);
+				if (!curPage || (curPage->id != id)) {
+					setPage(id);
+					ui.tabs->setEnabled(true);
+					setEdit(true);
+					ui.table->scrollToTop();
+					ui.table->selectionModel()->clear();
+					setEdit(false);
+				}
 			} else {
 				curPage = NULL;
 				disableTab();
