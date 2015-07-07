@@ -151,29 +151,20 @@ void MWindow::setPage(int id) {
 }
 
 QIcon getIcon(TPage* page) {
-	int red;
-	int green;
+//	int red;
+//	int green;
 	QPixmap pix(32,32);
 	QPainter pnt;
 	int prc = getProgress(page);
 	pnt.begin(&pix);
-	if (prc < 0) {
-		red = 0;
-		green = 0;
-	} else {
-		if (prc < 50) {
-			red = 250;
-			green = 5 * prc;
-		} else {
-			red = 500 - 5 * prc;
-			green = 250;
-		}
-	}
-	pnt.setBrush(QColor(red, green, 0));
-	pnt.drawRoundRect(1,1,30,30);
+	int high = 0.3 * prc;
+	pnt.setBrush(QColor(255,0,0));
+	pnt.drawRect(1,1,30,30-high);
+	pnt.setBrush(QColor(0,255,0));
+	pnt.drawRect(0,30-high,30,high);
 	pnt.setFont(QFont("FreeSans",15,QFont::Bold));
 	pnt.setPen(Qt::black);
-	pnt.drawText(QRect(0,8,32,16),Qt::AlignCenter,QString::number(prc));
+	pnt.drawText(QRect(0,16,32,16),Qt::AlignCenter,QString::number(prc));
 	pnt.end();
 	return QIcon(pix);
 }
