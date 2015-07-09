@@ -161,7 +161,7 @@ QIcon getIcon(TPage* page) {
 	pnt.drawRect(0,0,high,8);
 	pnt.setBrush(QColor(255,0,0));
 	pnt.drawRect(high,0,32-high,8);
-	pnt.setFont(QFont("FreeSans",15,QFont::Bold));
+	pnt.setFont(QFont("FreeSans",12,QFont::Bold));
 	pnt.setPen(Qt::black);
 	pnt.drawText(QRect(0,8,32,24),Qt::AlignCenter,QString::number(prc));
 	pnt.end();
@@ -270,7 +270,10 @@ void MWindow::lineDown() {
 	do {
 		curRow++;
 	} while ((curRow < model->rowCount()) && ui.table->isRowHidden(curRow));
-	if (curRow >= model->rowCount()) return;
+	if (curRow >= model->rowCount()) {
+		curRow = model->rowCount() - 1;
+	}
+	if (curRow < 0) return;
 	ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
@@ -407,8 +410,9 @@ void MWindow::rowDelete() {
 		curPage->text.removeAt(row);
 		model->removeRow(row);
 	}
-	ui.table->selectRow(ui.table->currentIndex().row());
-	lineDown();
+	row = ui.table->currentIndex().row();
+	ui.table->selectRow(row);
+	if (row) lineDown();
 	setProgress();
 }
 
