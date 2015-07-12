@@ -35,6 +35,7 @@ TPage* addPage(TPage page) {
 
 TPage* createPage() {
 	TPage page;
+	page.curRow = -1;
 	page.id = getid();
 	page.text.clear();
 	book.append(page);

@@ -1,10 +1,12 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef _MWINDOW_H
+#define _MWINDOW_H
 
 #include <QtGui>
 #include "base.h"
 #include "ui_mainwin.h"
 #include "ui_replace.h"
+
+extern TPage* curPage;
 
 class TBModel : public QAbstractTableModel {
 	public:
@@ -39,7 +41,6 @@ class MWindow : public QMainWindow {
 		void fillSJMenu();
 
 		void fillBlock(const QList<TLine>*);
-		void fillTab(TPage*);
 		void disableTab();
 		QTreeWidgetItem* addItem(QTreeWidgetItem*,QString,int,QIcon = QIcon());
 

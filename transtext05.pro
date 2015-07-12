@@ -16,5 +16,6 @@ FORMS += mainwin.ui replace.ui \
 SOURCES += main.cpp mainwin.cpp \
     snx.cpp \
     ks.cpp \
-    srp.cpp
+    srp.cpp \
+    tbmodel.cpp
 RESOURCES += resources.qrc

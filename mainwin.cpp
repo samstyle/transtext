@@ -10,7 +10,6 @@ TPage* curPage = NULL;
 MWindow::MWindow() {
 	curPage = NULL;
 	curItem = NULL;
-	curRow = -1;
 	prjPath.clear();
 	clip = QApplication::clipboard();
 
@@ -125,7 +124,7 @@ void MWindow::replace() {
 		if (curPage->text[i].trn.name.contains(fstr)) curPage->text[i].trn.name.replace(fstr,rstr);
 		if (curPage->text[i].trn.text.contains(fstr)) curPage->text[i].trn.text.replace(fstr,rstr);
 	}
-	fillTab(curPage);
+	model->update();
 }
 
 void MWindow::appendCbrd() {
@@ -138,7 +137,7 @@ void MWindow::appendCbrd() {
 	tlin.src.text = txt;
 	normLine(tlin);
 	curPage->text.append(tlin);
-	fillTab(curPage);
+	model->update();
 }
 
 void MWindow::sortTree() {
@@ -147,7 +146,7 @@ void MWindow::sortTree() {
 
 void MWindow::setPage(int id) {
 	curPage = findPage(id);
-	if (curPage) fillTab(curPage);
+	model->update();
 }
 
 QIcon getIcon(TPage* page) {
@@ -156,7 +155,7 @@ QIcon getIcon(TPage* page) {
 	int prc = getProgress(page);
 	pnt.begin(&pix);
 	int high = 0.32 * prc;
-	pnt.fillRect(1,1,30,30,Qt::gray);
+	pnt.fillRect(0,0,32,32,Qt::gray);
 	pnt.setBrush(QColor(0,255,0));
 	pnt.drawRect(0,0,high,8);
 	pnt.setBrush(QColor(255,0,0));
@@ -405,14 +404,14 @@ void MWindow::rowDelete() {
 		list.removeFirst();
 
 	}
-
-	foreach(row, rowList) {
-		curPage->text.removeAt(row);
-		model->removeRow(row);
-	}
 	row = ui.table->currentIndex().row();
+	foreach(i, rowList) {
+		curPage->text.removeAt(i);
+		model->removeRow(i);
+	}
+	if (row >= model->rowCount())
+		row--;
 	ui.table->selectRow(row);
-	if (row) lineDown();
 	setProgress();
 }
 
@@ -449,6 +448,9 @@ void MWindow::disableTab() {
 
 void MWindow::changePage() {
 	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
+	if (curPage) {
+		curPage->curRow = curRow;
+	}
 	if (rws.size() > 1) {
 		curPage = NULL;
 		disableTab();
@@ -479,6 +481,12 @@ void MWindow::changePage() {
 	model->update();
 	fillSJMenu();
 	setProgress();
+	if (curPage) {
+		curRow = curPage->curRow;
+		if (curRow > -1) {
+			ui.table->selectRow(curRow);
+		}
+	}
 }
 
 void MWindow::changeRow(QItemSelection) {
@@ -878,6 +886,7 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par) {
 	QIcon icon;
 	int haveicon;
 	TPage page;
+	page.curRow = -1;
 	TLine lin;
 	QString name;
 	QBuffer buf;
@@ -1304,151 +1313,3 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, int id, QIc
 	par->addChild(itm);
 	return itm;
 }
-
-// table
-
-/*
-void MWindow::rehideTab() {
-	QTableWidget* tab = ui.table;
-	QStringList lst;
-	QString id1,id2;
-//	QRadioButton* but;
-	int i;
-	for (i=0; i<tab->rowCount(); i++) {
-//		id1 = tab->item(i,1)->data(Qt::UserRole).toString();
-		id2 = tab->item(i,2)->data(Qt::UserRole).toString();
-		if (id2.startsWith(":")) {
-			tab->hideRow(i);
-		} else {
-			tab->showRow(i);
-		}
-	}
-}
-*/
-
-void MWindow::fillTab(TPage*) {
-//	int row;
-
-//	tab->setRowCount(page->text.size());
-
-//	tab->setColumnCount(5);
-//	tab->setEditTriggers(QTableWidget::NoEditTriggers);
-	model->update();
-
-/*
-	QList<TLine>* text = &curPage->text;
-	for (row=0; row < text->size(); row++) {
-		if ((text->at(row).type == TL_TEXT) || (text->at(row).type == TL_LABEL)) {
-			ui.table->showRow(row);
-		} else {
-			ui.table->hideRow(row);
-		}
-	}
-*/
-}
-
-// TBModel
-
-void TBModel::update() {
-	this->reset();
-}
-
-void TBModel::updateCell(int row, int col) {
-	QModelIndex idx = index(row,col);
-	emit dataChanged(idx,idx);
-}
-
-TBModel::TBModel(QObject* p):QAbstractTableModel(p) {}
-
-int TBModel::columnCount(const QModelIndex&) const {
-	return 5;
-}
-
-int TBModel::rowCount(const QModelIndex&) const {
-	if (curPage == NULL) return 0;
-	return curPage->text.size();
-}
-
-QVariant TBModel::data(const QModelIndex& idx, int role) const {
-	QVariant res;
-	if (role != Qt::DisplayRole) return res;
-	if (!idx.isValid()) return res;
-	if ((idx.row() < 0) || (idx.row() > rowCount(idx))) return res;
-	if ((idx.column() < 0) || (idx.column() > columnCount(idx))) return res;
-	switch (idx.column()) {
-		case 1: res = curPage->text.at(idx.row()).src.name; break;
-		case 2: res = curPage->text.at(idx.row()).src.text; break;
-		case 3: res = curPage->text.at(idx.row()).trn.name; break;
-		case 4: res = curPage->text.at(idx.row()).trn.text; break;
-	}
-	return res;
-}
-
-void TBModel::insertRow(int row, const QModelIndex& idx) {
-	emit beginInsertRows(idx,row,row);
-	emit endInsertRows();
-}
-
-void TBModel::removeRow(int row, const QModelIndex& idx) {
-	emit beginRemoveRows(idx,row,row);
-	emit endRemoveRows();
-}
-
-QVariant TBModel::headerData(int sect,Qt::Orientation orien, int role) const {
-	if (role != Qt::DisplayRole) return QVariant();
-	if (orien == Qt::Vertical) return QString::number(sect+1);
-	QVariant res;
-	if (orien == Qt::Horizontal) {
-		switch (sect) {
-			case 1: res = "Name"; break;
-			case 2: res = "Text"; break;
-			case 3: res = trUtf8("Имя"); break;
-			case 4: res = trUtf8("Текст"); break;
-		}
-	}
-	return res;
-}
-
-// translation
-
-/*
-void MWindow::translate(QString text) {
-	DResult res;
-	DWord wrd;
-	int rows = 0;
-	int pos = 0;
-	ui.transtab->setRowCount(rows);
-	while (text.size() > 0) {
-		res = scanLine(text);
-		if (res.size == 0) {
-			text.remove(0,1);
-			pos++;
-		} else {
-			ui.transtab->setRowCount(rows+1);
-			ui.transtab->setItem(rows,0,new QTableWidgetItem(text.left(res.size)));
-			wrd = res.node->words.first();
-			ui.transtab->setItem(rows,1,new QTableWidgetItem(wrd.word));
-			ui.transtab->setItem(rows,2,new QTableWidgetItem(wrd.read));
-			ui.transtab->setItem(rows,3,new QTableWidgetItem(wrd.type));
-			ui.transtab->setItem(rows,4,new QTableWidgetItem(wrd.trans));
-			ui.transtab->item(rows,0)->setData(Qt::UserRole,pos);
-			ui.transtab->item(rows,1)->setData(Qt::UserRole,res.size);
-			pos += res.size;
-			text.remove(0,res.size);
-			rows++;
-		}
-	}
-}
-
-void MWindow::transRow(QItemSelection sel) {
-	QModelIndexList idx = sel.indexes();
-	if (idx.size() == 0) {
-		ui.transline->setSelection(0,0);
-	} else {
-		int row = idx.first().row();
-		int start = ui.transtab->item(row,0)->data(Qt::UserRole).toInt();
-		int len = ui.transtab->item(row,1)->data(Qt::UserRole).toInt();
-		ui.transline->setSelection(start,len);
-	}
-}
-*/

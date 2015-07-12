@@ -48,6 +48,7 @@ struct TLine {
 struct TPage {
 	int id;
 	int flag;
+	int curRow;
 	QString name;
 	QList<TLine> text;
 };
