@@ -449,7 +449,7 @@ void MWindow::disableTab() {
 void MWindow::changePage() {
 	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
 	if (curPage) {
-		curPage->curRow = curRow;
+		curPage->curRow = ui.table->currentIndex().row();
 	}
 	if (rws.size() > 1) {
 		curPage = NULL;
