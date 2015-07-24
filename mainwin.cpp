@@ -155,12 +155,10 @@ QIcon getIcon(TPage* page) {
 	int prc = getProgress(page);
 	pnt.begin(&pix);
 	int high = 0.32 * prc;
-	pnt.fillRect(0,0,32,32,Qt::gray);
-	pnt.setBrush(QColor(0,255,0));
-	pnt.drawRect(0,0,high,8);
-	pnt.setBrush(QColor(255,0,0));
-	pnt.drawRect(high,0,32-high,8);
-	pnt.setFont(QFont("FreeSans",12,QFont::Bold));
+	pnt.fillRect(0,0,32,32,Qt::lightGray);
+	pnt.fillRect(0,0,high,8,Qt::green);
+	pnt.fillRect(high,0,32-high,8,Qt::red);
+	pnt.setFont(QFont("FreeSans",15,QFont::Bold));
 	pnt.setPen(Qt::black);
 	pnt.drawText(QRect(0,8,32,24),Qt::AlignCenter,QString::number(prc));
 	pnt.end();
