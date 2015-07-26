@@ -373,6 +373,7 @@ void MWindow::pageSplit() {
 	newp->text = tx2;
 	curPage->text = tx1;
 	model->update();
+	setProgress();
 }
 
 // rows actions
@@ -440,7 +441,6 @@ void MWindow::disableTab() {
 	curRow = -1;
 	ui.tabs->setEnabled(false);
 	setEdit(false);
-//	ui.table->setRowCount(0);
 	ui.table->update();
 }
 

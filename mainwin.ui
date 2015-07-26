@@ -11,99 +11,91 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>TransText 0.5</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/Japan.png</normaloff>:/Japan.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="5">
+   <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QTreeWidget" name="tree">
-        <property name="maximumSize">
-         <size>
-          <width>200</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="contextMenuPolicy">
-         <enum>Qt::ActionsContextMenu</enum>
-        </property>
-        <property name="dragDropMode">
-         <enum>QAbstractItemView::InternalMove</enum>
-        </property>
-        <property name="defaultDropAction">
-         <enum>Qt::MoveAction</enum>
-        </property>
-        <property name="selectionMode">
-         <enum>QAbstractItemView::ExtendedSelection</enum>
-        </property>
-        <attribute name="headerVisible">
-         <bool>false</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string notr="true">1</string>
+     <widget class="QTreeWidget" name="tree">
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="contextMenuPolicy">
+       <enum>Qt::ActionsContextMenu</enum>
+      </property>
+      <property name="dragDropMode">
+       <enum>QAbstractItemView::InternalMove</enum>
+      </property>
+      <property name="defaultDropAction">
+       <enum>Qt::MoveAction</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ExtendedSelection</enum>
+      </property>
+      <attribute name="headerVisible">
+       <bool>false</bool>
+      </attribute>
+      <column>
+       <property name="text">
+        <string notr="true">1</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="tabs" native="true">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <layout class="QGridLayout" name="editGrid" columnstretch="0,10">
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="trnline"/>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="srcline"/>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLineEdit" name="srcname"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLineEdit" name="trnname"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTableView" name="table">
+         <property name="contextMenuPolicy">
+          <enum>Qt::CustomContextMenu</enum>
          </property>
-        </column>
-       </widget>
-      </item>
-      <item>
-       <widget class="QTabWidget" name="tabs">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <widget class="QWidget" name="tab">
-         <attribute name="title">
-          <string>Text</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <layout class="QGridLayout" name="editGrid" columnstretch="0,10">
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="trnline"/>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="srcline"/>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLineEdit" name="srcname"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLineEdit" name="trnname"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QTableView" name="table">
-            <property name="contextMenuPolicy">
-             <enum>Qt::CustomContextMenu</enum>
-            </property>
-            <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
-            </property>
-            <property name="gridStyle">
-             <enum>Qt::DotLine</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QProgressBar" name="progress">
-            <property name="value">
-             <number>0</number>
-            </property>
-            <property name="format">
-             <string>%v / %m</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="gridStyle">
+          <enum>Qt::DotLine</enum>
+         </property>
         </widget>
-       </widget>
-      </item>
-     </layout>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="progress">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="format">
+          <string>%v / %m</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -285,8 +277,6 @@
   </action>
  </widget>
  <tabstops>
-  <tabstop>tree</tabstop>
-  <tabstop>tabs</tabstop>
   <tabstop>srcname</tabstop>
   <tabstop>srcline</tabstop>
   <tabstop>trnname</tabstop>

@@ -9,13 +9,9 @@ INCLUDEPATH += .
 # CONFIG += debug
 
 # Input
-HEADERS += base.h mainwin.h \
-    filetypes.h
-FORMS += mainwin.ui replace.ui \
-    replace.ui
-SOURCES += main.cpp mainwin.cpp \
-    snx.cpp \
-    ks.cpp \
-    srp.cpp \
-    tbmodel.cpp
+HEADERS += base.h mainwin.h filetypes.h
+FORMS += mainwin.ui replace.ui replace.ui
+SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp
 RESOURCES += resources.qrc
+
+DISTFILES +=
