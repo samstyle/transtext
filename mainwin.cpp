@@ -4,7 +4,6 @@
 #include <string.h>
 
 QColor blkcol;
-QDialog* repwin;
 TPage* curPage = NULL;
 
 MWindow::MWindow() {
@@ -28,10 +27,12 @@ MWindow::MWindow() {
 	tab->verticalHeader()->setDefaultSectionSize(17);
 	tab->verticalHeader()->setVisible(false);
 
-	repwin = new QDialog(this);
-	rui.setupUi(repwin);
-	connect(rui.butok,SIGNAL(released()),this,SLOT(replace()));
-	connect(rui.butcan,SIGNAL(released()),repwin,SLOT(hide()));
+	ui.widFind->hide();
+
+//	repwin = new QDialog(this);
+//	rui.setupUi(repwin);
+//	connect(rui.butok,SIGNAL(released()),this,SLOT(replace()));
+//	connect(rui.butcan,SIGNAL(released()),repwin,SLOT(hide()));
 
 	connect(ui.actNewProj,SIGNAL(triggered()),this,SLOT(newPrj()));
 	connect(ui.actOpen,SIGNAL(triggered()),this,SLOT(openPrj()));
@@ -68,16 +69,18 @@ MWindow::MWindow() {
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
 	tbMenu->addAction(ui.actFindUntrn);
-	tbMenu->addAction(ui.actReplace);
+//	tbMenu->addAction(ui.actReplace);
 	tbMenu->addAction(ui.actSplit);
 	tbMenu->addAction(ui.actDelRows);
 	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(tbContextMenu()));
 	connect(sjMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
 
-	connect(ui.actReplace,SIGNAL(triggered()),repwin,SLOT(show()));
+//	connect(ui.actReplace,SIGNAL(triggered()),repwin,SLOT(show()));
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
+
+	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(filter(QString)));
 
 }
 
@@ -112,6 +115,7 @@ void MWindow::fillSJMenu() {
 	}
 }
 
+/*
 void MWindow::replace() {
 	repwin->hide();
 	if (curPage == NULL) return;
@@ -126,6 +130,7 @@ void MWindow::replace() {
 	}
 	model->update();
 }
+*/
 
 void MWindow::appendCbrd() {
 	if (!ui.actGrabCbrd->isChecked()) return;
@@ -207,6 +212,21 @@ int MWindow::getCurrentRow() {
 	return res;
 }
 
+void MWindow::filter(QString str) {
+	int i;
+	bool match;
+	if (ui.widFind->isHidden() || str.isEmpty()) {
+		for (i = 0; i < ui.table->model()->rowCount(); i++) {
+			ui.table->setRowHidden(i, false);
+		}
+	} else {
+		for (i = 0; i < ui.table->model()->rowCount(); i++) {
+			match = curPage->text[i].trn.text.contains(str, Qt::CaseInsensitive);
+			ui.table->setRowHidden(i, !match);
+		}
+	}
+}
+
 // protected
 
 void MWindow::keyPressEvent(QKeyEvent* ev) {
@@ -223,6 +243,16 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				break;
 			case Qt::Key_O:
 				openPrj();
+				break;
+			case Qt::Key_F:
+				if (ui.widFind->isHidden()) {
+					ui.leFind->clear();
+					ui.leReplace->clear();
+					ui.widFind->show();
+				} else {
+					ui.widFind->hide();
+					filter("");
+				}
 				break;
 			case Qt::Key_D:
 				if (ui.srcname->isVisible()) break;

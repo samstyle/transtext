@@ -85,6 +85,29 @@
         </widget>
        </item>
        <item>
+        <widget class="QWidget" name="widFind" native="true">
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLineEdit" name="leFind"/>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="leReplace"/>
+          </item>
+          <item>
+           <widget class="QToolButton" name="tbReplace">
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/replace.png</normaloff>:/replace.png</iconset>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QProgressBar" name="progress">
          <property name="value">
           <number>0</number>
@@ -237,19 +260,6 @@
    </property>
    <property name="text">
     <string>Grab clipboard</string>
-   </property>
-  </action>
-  <action name="actReplace">
-   <property name="text">
-    <string>Replace...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+F</string>
-   </property>
-  </action>
-  <action name="actChangeIcon">
-   <property name="text">
-    <string>Change Icon</string>
    </property>
   </action>
   <action name="actInsertSrc">

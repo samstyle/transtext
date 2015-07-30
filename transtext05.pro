@@ -10,7 +10,7 @@ INCLUDEPATH += .
 
 # Input
 HEADERS += base.h mainwin.h filetypes.h
-FORMS += mainwin.ui replace.ui replace.ui
+FORMS += mainwin.ui
 SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp
 RESOURCES += resources.qrc
 

@@ -4,7 +4,6 @@
 #include <QtGui>
 #include "base.h"
 #include "ui_mainwin.h"
-#include "ui_replace.h"
 
 extern TPage* curPage;
 
@@ -29,7 +28,7 @@ class MWindow : public QMainWindow {
 		void openPrj(QString path = "");
 	private:
 		Ui::MainWin ui;
-		Ui::Replacer rui;
+//		Ui::Replacer rui;
 		int curRow;
 		QTreeWidgetItem* curItem;
 		QString prjPath;
@@ -64,6 +63,7 @@ class MWindow : public QMainWindow {
 		void tbContextMenu();
 		void jumpLine(QAction*);
 		void findUntrn();
+		void filter(QString);
 
 		void appendCbrd();
 		void changePage();
@@ -79,7 +79,7 @@ class MWindow : public QMainWindow {
 		void sortTree();
 		void mergePages();
 
-		void replace();
+//		void replace();
 
 		void rowDelete();
 		void rowInsert(bool);
