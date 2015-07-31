@@ -280,6 +280,12 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 			case Qt::Key_Down:
 				lineDown();
 				break;
+			case Qt::Key_Escape:
+				if (ui.widFind->isVisible()) {
+					ui.widFind->hide();
+					filter("");
+				}
+				break;
 		}
 	}
 }
@@ -515,6 +521,8 @@ void MWindow::changePage() {
 			ui.table->selectRow(curRow);
 		}
 	}
+	ui.widFind->hide();
+	filter("");
 }
 
 void MWindow::changeRow(QItemSelection) {
