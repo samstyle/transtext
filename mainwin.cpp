@@ -355,8 +355,8 @@ void MWindow::delPage() {
 	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
 	if (items.isEmpty()) return;
 	if (!askSure("Delete selected element(s)?")) return;
-	QTreeWidgetItem* itm;
-	foreach(itm, items) {
+	ui.tree->selectionModel()->clear();
+	foreach(QTreeWidgetItem* itm, items) {
 		delItem(itm);
 	}
 }
@@ -386,14 +386,16 @@ void MWindow::mergePages() {
 void MWindow::delItem(QTreeWidgetItem* item) {
 	int id = item->data(0,Qt::UserRole).toInt();
 	if (id == 0) {
-		for (id = 0; id < item->childCount(); id++)
+		for (id = 0; id < item->childCount(); id++) {
 			delItem(item->child(id));
+		}
 	} else {
 		removePage(id);
 	}
 	QTreeWidgetItem* par = item->parent();
 	if (par == NULL) par = ui.tree->invisibleRootItem();
-	par->removeChild(item);
+	if (par->indexOfChild(item) >= 0)
+		par->removeChild(item);
 }
 
 // pix
@@ -481,19 +483,19 @@ void MWindow::disableTab() {
 }
 
 void MWindow::changePage() {
-	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
 	if (curPage) {
 		curPage->curRow = ui.table->currentIndex().row();
-	}
-	if (rws.size() > 1) {
 		curPage = NULL;
+	}
+	if (ui.tree->selectedItems().size() != 1) {
 		disableTab();
 	} else {
 		QTreeWidgetItem* itm = ui.tree->currentItem();
-		int id;
-		curItem = itm;
-		if (itm) {
-			id = itm->data(0,Qt::UserRole).toInt();
+		if (!itm) {
+			disableTab();
+		} else {
+			curItem = itm;
+			int id = itm->data(0,Qt::UserRole).toInt();
 			if (id != 0) {
 				if (!curPage || (curPage->id != id)) {
 					setPage(id);
@@ -504,12 +506,8 @@ void MWindow::changePage() {
 					setEdit(false);
 				}
 			} else {
-				curPage = NULL;
 				disableTab();
 			}
-		} else {
-			curPage = NULL;
-			disableTab();
 		}
 	}
 	model->update();
