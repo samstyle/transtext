@@ -218,7 +218,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 				tlin.src.text = "[select]";
 				page->text.append(tlin);
 				ddz.clear();
-				ddz << "_Character" << "_Character2" << "_Character3" << "_Character4";
+				ddz << "_Character" << "_Character2" << "_Character3" << "_Character4" << "_Character5" << "_Character6";
 				foreach (num, ddz) {
 					if (eamap.count(num) > 0) {
 						if (!eamap[num].isEmpty()) {
@@ -237,8 +237,8 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 				tlin.src.text = "[select]";
 				page->text.append(tlin);
 				ddz.clear();
-				ddz << "_SelStr0" << "_SelStr1" << "_SelStr2" << "_SelStr3";
-				ddz << "_SelChar0" << "_SelChar1" << "_SelChar2" << "_SelChar3";
+				ddz << "_SelStr0" << "_SelStr1" << "_SelStr2" << "_SelStr3" << "_SelStr4" << "_SelStr5";
+				ddz << "_SelChar0" << "_SelChar1" << "_SelChar2" << "_SelChar3" << "_SelChar4" << "_SelChar5";
 				foreach (num, ddz) {
 					if (eamap.count(num) > 0) {
 						if (!eamap[num].isEmpty()) {
@@ -249,6 +249,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 				}
 				tlin.src.text.clear();
 				page->text.append(tlin);
+				eamap.clear();
 			} else if ((prs[2] == "00MovPlay.dat") || (prs[2] == "00HMovPlay.dat")) {
 				tlin.type = TL_TEXT;
 				if (eamap.count("_MOVName")) tlin.src.text = QString("[MOV : %1]").arg(eamap["_MOVName"]);
@@ -267,7 +268,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 				tlin.src.text = "[select]";
 				page->text.append(tlin);
 				ddz.clear();
-				ddz << "_SQ_Sel01Text" << "_SQ_Sel02Text" << "_SQ_Sel03Text";
+				ddz << "_SQ_Sel01Text" << "_SQ_Sel02Text" << "_SQ_Sel03Text" << "_SQ_Sel04Text" << "_SQ_Sel05Text";
 				foreach(num,ddz) {
 					if (eamap.count(num) > 0) {
 						if (!eamap[num].isEmpty()) {
@@ -277,6 +278,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 						}
 					}
 				}
+				eamap.clear();
 			}
 		} else if (prs[0].startsWith("120,")) {
 			pos = num.indexOf("(");
