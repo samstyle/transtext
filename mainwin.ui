@@ -88,21 +88,17 @@
         <widget class="QWidget" name="widFind" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
-           <widget class="QLineEdit" name="leFind"/>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="leReplace"/>
-          </item>
-          <item>
-           <widget class="QToolButton" name="tbReplace">
+           <widget class="QLabel" name="label">
             <property name="text">
-             <string>...</string>
+             <string/>
             </property>
-            <property name="icon">
-             <iconset resource="resources.qrc">
-              <normaloff>:/replace.png</normaloff>:/replace.png</iconset>
+            <property name="pixmap">
+             <pixmap resource="resources.qrc">:/find.png</pixmap>
             </property>
            </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="leFind"/>
           </item>
          </layout>
         </widget>
@@ -283,6 +279,15 @@
    </property>
    <property name="text">
     <string>Merge</string>
+   </property>
+  </action>
+  <action name="actClearTrn">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/clear.png</normaloff>:/clear.png</iconset>
+   </property>
+   <property name="text">
+    <string>Clear translation</string>
    </property>
   </action>
  </widget>

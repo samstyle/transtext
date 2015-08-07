@@ -69,19 +69,36 @@ MWindow::MWindow() {
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
 	tbMenu->addAction(ui.actFindUntrn);
-//	tbMenu->addAction(ui.actReplace);
+	tbMenu->addAction(ui.actClearTrn);
 	tbMenu->addAction(ui.actSplit);
 	tbMenu->addAction(ui.actDelRows);
 	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(tbContextMenu()));
 	connect(sjMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
+	connect(ui.actClearTrn,SIGNAL(triggered()),this,SLOT(clearTrn()));
 
-//	connect(ui.actReplace,SIGNAL(triggered()),repwin,SLOT(show()));
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(filter(QString)));
 
+}
+
+bool askSure(QString text) {
+	QMessageBox box(QMessageBox::Question,"Question",text,QMessageBox::Yes | QMessageBox::No);
+	// int res = box.exec();
+	return (box.exec() == QMessageBox::Yes);
+}
+
+void MWindow::clearTrn() {
+	if (!curPage) return;
+	if (!askSure("Clear translation?")) return;
+	for (int i = 0; i < curPage->text.size(); i++) {
+		curPage->text[i].trn.name.clear();
+		curPage->text[i].trn.text.clear();
+	}
+	setProgress();
+	model->update();
 }
 
 void MWindow::findUntrn() {
@@ -221,7 +238,10 @@ void MWindow::filter(QString str) {
 		}
 	} else {
 		for (i = 0; i < ui.table->model()->rowCount(); i++) {
-			match = curPage->text[i].trn.text.contains(str, Qt::CaseInsensitive);
+			match = curPage->text[i].trn.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[i].trn.name.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[i].src.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[i].src.name.contains(str, Qt::CaseInsensitive);
 			ui.table->setRowHidden(i, !match);
 		}
 	}
@@ -247,7 +267,6 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 			case Qt::Key_F:
 				if (ui.widFind->isHidden()) {
 					ui.leFind->clear();
-					ui.leReplace->clear();
 					ui.widFind->show();
 				} else {
 					ui.widFind->hide();
@@ -334,12 +353,6 @@ void MWindow::closeEvent(QCloseEvent* ev) {
 }
 
 // page
-
-bool askSure(QString text) {
-	QMessageBox box(QMessageBox::Question,"Question",text,QMessageBox::Yes | QMessageBox::No);
-	int res = box.exec();
-	return (res == QMessageBox::Yes);
-}
 
 void MWindow::changeIcon() {
 	if (curItem == NULL) return;

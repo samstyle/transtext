@@ -78,6 +78,7 @@ class MWindow : public QMainWindow {
 		void delItem(QTreeWidgetItem*);
 		void sortTree();
 		void mergePages();
+		void clearTrn();
 
 //		void replace();
 
