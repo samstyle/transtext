@@ -69,9 +69,9 @@ MWindow::MWindow() {
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
 	tbMenu->addAction(ui.actFindUntrn);
-	tbMenu->addAction(ui.actClearTrn);
 	tbMenu->addAction(ui.actSplit);
 	tbMenu->addAction(ui.actDelRows);
+	tbMenu->addAction(ui.actClearTrn);
 	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(tbContextMenu()));
 	connect(sjMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
 	connect(ui.actClearTrn,SIGNAL(triggered()),this,SLOT(clearTrn()));
@@ -268,6 +268,7 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				if (ui.widFind->isHidden()) {
 					ui.leFind->clear();
 					ui.widFind->show();
+					ui.leFind->setFocus();
 				} else {
 					ui.widFind->hide();
 					filter("");
