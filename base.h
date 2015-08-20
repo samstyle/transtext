@@ -22,6 +22,7 @@
 #define	TL_COM		7
 
 #define	FL_HIDDEN	1
+#define FL_BOOKMARK	(1 << 1)
 
 #define LS_NONE		0
 #define	LS_UNTRN	1

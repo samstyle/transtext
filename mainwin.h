@@ -37,6 +37,7 @@ class MWindow : public QMainWindow {
 
 		QMenu* tbMenu;
 		QMenu* sjMenu;
+		QMenu* bmMenu;
 		void fillSJMenu();
 
 		void fillBlock(const QList<TLine>*);

@@ -24,15 +24,29 @@ int TBModel::rowCount(const QModelIndex&) const {
 
 QVariant TBModel::data(const QModelIndex& idx, int role) const {
 	QVariant res;
-	if (role != Qt::DisplayRole) return res;
 	if (!idx.isValid()) return res;
 	if ((idx.row() < 0) || (idx.row() > rowCount(idx))) return res;
 	if ((idx.column() < 0) || (idx.column() > columnCount(idx))) return res;
-	switch (idx.column()) {
-		case 1: res = curPage->text.at(idx.row()).src.name; break;
-		case 2: res = curPage->text.at(idx.row()).src.text; break;
-		case 3: res = curPage->text.at(idx.row()).trn.name; break;
-		case 4: res = curPage->text.at(idx.row()).trn.text; break;
+	switch(role) {
+		case Qt::BackgroundRole:
+			if ((idx.column() == 0) && (curPage->text.at(idx.row()).flag & FL_BOOKMARK))
+				res = QBrush(Qt::yellow);
+			break;
+		case Qt::ForegroundRole:
+			if ((idx.column() == 0) && (curPage->text.at(idx.row()).flag & FL_BOOKMARK))
+				res = QBrush(Qt::red);
+			break;
+		case Qt::DisplayRole:
+			switch (idx.column()) {
+				case 0: if (curPage->text.at(idx.row()).flag & FL_BOOKMARK)
+						res = "B";
+					break;
+				case 1: res = curPage->text.at(idx.row()).src.name; break;
+				case 2: res = curPage->text.at(idx.row()).src.text; break;
+				case 3: res = curPage->text.at(idx.row()).trn.name; break;
+				case 4: res = curPage->text.at(idx.row()).trn.text; break;
+			}
+			break;
 	}
 	return res;
 }

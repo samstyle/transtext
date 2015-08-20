@@ -68,12 +68,17 @@ MWindow::MWindow() {
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
+	bmMenu = tbMenu->addMenu("Bookmarks");
 	tbMenu->addAction(ui.actFindUntrn);
+	tbMenu->addSeparator();
 	tbMenu->addAction(ui.actSplit);
+	tbMenu->addSeparator();
 	tbMenu->addAction(ui.actDelRows);
 	tbMenu->addAction(ui.actClearTrn);
+
 	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(tbContextMenu()));
 	connect(sjMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
+	connect(bmMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
 	connect(ui.actClearTrn,SIGNAL(triggered()),this,SLOT(clearTrn()));
 
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
@@ -123,9 +128,13 @@ void MWindow::jumpLine(QAction *act) {
 
 void MWindow::fillSJMenu() {
 	sjMenu->clear();
+	bmMenu->clear();
 	if (!curPage) return;
 	int i;
 	for (i = 0; i < curPage->text.size(); i++) {
+		if (curPage->text[i].flag & FL_BOOKMARK) {
+			bmMenu->addAction(QString::number(i))->setData(i);
+		}
 		if (curPage->text[i].src.text.contains("[select]")) {
 			sjMenu->addAction(QString::number(i))->setData(i);
 		}
@@ -284,6 +293,12 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				}
 				ui.srcname->setVisible(true);
 				ui.trnname->setVisible(true);
+				break;
+			case Qt::Key_Z:
+				if (!curPage) return;
+				curPage->text[curRow].flag ^= FL_BOOKMARK;
+				model->updateCell(curRow, 0);
+				fillSJMenu();
 				break;
 		}
 	} else {
