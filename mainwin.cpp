@@ -63,7 +63,7 @@ MWindow::MWindow() {
 	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actDelPage);
 
-	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(treeContextMenu()));
+	connect(ui.tree,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(treeContextMenu()));
 	connect(ui.actNewDir,SIGNAL(triggered()),this,SLOT(newDir()));
 	connect(ui.actDelPage,SIGNAL(triggered()),this,SLOT(delPage()));
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
