@@ -54,16 +54,19 @@ MWindow::MWindow() {
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
 
-	ui.tree->addAction(ui.actNewDir);
-	ui.tree->addAction(ui.actNewPage);
-	ui.tree->addAction(ui.actSort);
-	ui.tree->addAction(ui.actMerge);
-	// ui.tree->addAction(ui.actChangeIcon);
-	ui.tree->addAction(ui.actDelPage);
+	treeMenu = new QMenu();
+	treeMenu->addAction(ui.actNewDir);
+	treeMenu->addAction(ui.actNewPage);
+	treeMenu->addAction(ui.actSort);
+	treeMenu->addSeparator();
+	treeMenu->addAction(ui.actMerge);
+	treeMenu->addSeparator();
+	treeMenu->addAction(ui.actDelPage);
+
+	connect(ui.table,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(treeContextMenu()));
 	connect(ui.actNewDir,SIGNAL(triggered()),this,SLOT(newDir()));
 	connect(ui.actDelPage,SIGNAL(triggered()),this,SLOT(delPage()));
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
-	// connect(ui.actChangeIcon,SIGNAL(triggered()),this,SLOT(changeIcon()));
 	connect(ui.actMerge, SIGNAL(triggered()), this, SLOT(mergePages()));
 
 	tbMenu = new QMenu();
@@ -114,6 +117,11 @@ void MWindow::findUntrn() {
 			break;
 		}
 	}
+}
+
+void MWindow::treeContextMenu() {
+	treeMenu->move(QCursor::pos());
+	treeMenu->show();
 }
 
 void MWindow::tbContextMenu() {
@@ -453,12 +461,14 @@ void MWindow::rowDelete() {
 	rowList.append(list.first().row());
 	list.removeFirst();
 	int i,row;
+	int minrow = 0;
 	while (list.size() > 0) {
 		row = list.first().row();
 		if (row > rowList.first()) {
 			rowList.prepend(row);
 		} else if (row < rowList.last()) {
 			rowList.append(row);
+			minrow = row;
 		} else {
 			for (i = 0; i < rowList.size() - 1; i++) {
 				if (row < rowList.at(i)) {
@@ -475,9 +485,13 @@ void MWindow::rowDelete() {
 		curPage->text.removeAt(i);
 		model->removeRow(i);
 	}
+/*
 	if (row >= model->rowCount())
 		row--;
 	ui.table->selectRow(row);
+*/
+	ui.table->selectRow(minrow);
+	fillSJMenu();
 	setProgress();
 }
 

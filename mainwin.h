@@ -38,6 +38,7 @@ class MWindow : public QMainWindow {
 		QMenu* tbMenu;
 		QMenu* sjMenu;
 		QMenu* bmMenu;
+		QMenu* treeMenu;
 		void fillSJMenu();
 
 		void fillBlock(const QList<TLine>*);
@@ -61,6 +62,7 @@ class MWindow : public QMainWindow {
 		void loadVer6(QByteArray&, QTreeWidgetItem*);
 		void loadVer7(QByteArray&, QTreeWidgetItem*);
 	private slots:
+		void treeContextMenu();
 		void tbContextMenu();
 		void jumpLine(QAction*);
 		void findUntrn();
