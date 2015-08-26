@@ -461,14 +461,12 @@ void MWindow::rowDelete() {
 	rowList.append(list.first().row());
 	list.removeFirst();
 	int i,row;
-	int minrow = 0;
 	while (list.size() > 0) {
 		row = list.first().row();
 		if (row > rowList.first()) {
 			rowList.prepend(row);
 		} else if (row < rowList.last()) {
 			rowList.append(row);
-			minrow = row;
 		} else {
 			for (i = 0; i < rowList.size() - 1; i++) {
 				if (row < rowList.at(i)) {
@@ -480,7 +478,8 @@ void MWindow::rowDelete() {
 		list.removeFirst();
 
 	}
-	row = ui.table->currentIndex().row();
+//	row = ui.table->currentIndex().row();
+	row = rowList.last();
 	foreach(i, rowList) {
 		curPage->text.removeAt(i);
 		model->removeRow(i);
@@ -488,9 +487,9 @@ void MWindow::rowDelete() {
 /*
 	if (row >= model->rowCount())
 		row--;
-	ui.table->selectRow(row);
 */
-	ui.table->selectRow(minrow);
+	ui.table->selectRow(row);
+//	ui.table->selectRow(minrow);
 	fillSJMenu();
 	setProgress();
 }
