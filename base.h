@@ -55,6 +55,7 @@ struct TPage {
 };
 
 void prjInit();
+int getid();
 
 TPage* createPage();
 TPage* addPage(TPage);

@@ -29,7 +29,6 @@ ParLine parseKS(QString& line) {
 		}
 	}
 	res.com = line.left(pos);
-	// qDebug() << res.com;
 	line.remove(0,pos+1);
 	while ((line.size() > 0) && wrk) {
 		if (line.startsWith("]")) {
@@ -60,7 +59,6 @@ ParLine parseKS(QString& line) {
 					}
 					line.remove(0,1);
 				}
-				// qDebug() << par.name << par.value;
 				res.pars.append(par);
 			} else {
 				wrk = false;
@@ -80,11 +78,16 @@ QString getAttribute(ParLine par, QString name) {
 
 TPage loadKS(QString fnam) {
 	TPage page;
+	page.id = 0;
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;
+	page.id = getid();
 	TLine nlin;
 	TLine elin;
+	nlin.flag = 0;
 	nlin.type = TL_TEXT;
+	elin.type = TL_TEXT;
+	elin.flag = 0;
 	int pos;
 	QString line;
 	QString val;
@@ -105,7 +108,6 @@ TPage loadKS(QString fnam) {
 			line.remove("[en]");
 		} while (nxtline && !file.atEnd());
 		while (line.size() > 0) {
-			qDebug() << line;
 			if (line.startsWith(";")) {	// ; comment
 				line.clear();
 			} else if (line.startsWith("*")) {	// *label except of *(something)|
@@ -119,7 +121,6 @@ TPage loadKS(QString fnam) {
 				line.clear();
 			} else if (line.startsWith("[")) {	//  && !line.endsWith(QDialog::trUtf8("」")) && !line.endsWith(QDialog::trUtf8("）"))
 				param = parseKS(line);
-				qDebug() << param.com;
 				if (param.com == "name") {
 					nlin.src.name = getAttribute(param,"text");
 				} else if ((param.com == "cg_i") || (param.com == "cg_a")) {
