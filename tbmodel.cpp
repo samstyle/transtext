@@ -3,7 +3,7 @@
 // TBModel
 
 void TBModel::update() {
-	this->reset();
+	endResetModel();
 }
 
 void TBModel::updateCell(int row, int col) {

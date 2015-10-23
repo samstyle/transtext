@@ -1,7 +1,10 @@
-#include "mainwin.h"
-#include "filetypes.h"
+#include <QMessageBox>
+#include <QFileDialog>
 
 #include <string.h>
+
+#include "mainwin.h"
+#include "filetypes.h"
 
 QColor blkcol;
 TPage* curPage = NULL;

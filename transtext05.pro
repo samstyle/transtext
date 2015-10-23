@@ -3,10 +3,10 @@
 ######################################################################
 
 TEMPLATE = app
-TARGET = 
+TARGET = transtext05
 DEPENDPATH += .
 INCLUDEPATH += .
-# CONFIG += debug
+QT += widgets
 
 # Input
 HEADERS += base.h mainwin.h filetypes.h

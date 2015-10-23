@@ -1,4 +1,5 @@
-#include <QtGui>
+#include <QDialog>
+
 #include "base.h"
 #include "mainwin.h"
 
