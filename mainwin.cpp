@@ -660,6 +660,7 @@ struct TRBHead {
 	};
 };
 
+/*
 void MWindow::loadVer4(QByteArray& data, QTreeWidgetItem* par) {
 	int type;
 	int temp;
@@ -914,6 +915,8 @@ void MWindow::loadVer6(QByteArray& data, QTreeWidgetItem* par) {
 	buf.close();
 }
 
+*/
+
 #define T7_PAGE	0x3F
 #define	T7_TREE	0x3E
 #define T7_END	0x00
@@ -1067,9 +1070,9 @@ void MWindow::openPrj(QString path) {
 			book.clear();
 			QTreeWidgetItem* par = ui.tree->invisibleRootItem();
 			switch (ver) {
-				case 4: loadVer4(data,par); break;
-				case 5: loadVer5(data,par); break;
-				case 6: loadVer6(data,par); break;
+//				case 4: loadVer4(data,par); break;
+//				case 5: loadVer5(data,par); break;
+//				case 6: loadVer6(data,par); break;
 				case 7: loadVer7(data,par); break;
 			}
 		}

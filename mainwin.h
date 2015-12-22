@@ -57,9 +57,9 @@ class MWindow : public QMainWindow {
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 
-		void loadVer4(QByteArray&, QTreeWidgetItem*);
-		void loadVer5(QByteArray&, QTreeWidgetItem*);
-		void loadVer6(QByteArray&, QTreeWidgetItem*);
+//		void loadVer4(QByteArray&, QTreeWidgetItem*);
+//		void loadVer5(QByteArray&, QTreeWidgetItem*);
+//		void loadVer6(QByteArray&, QTreeWidgetItem*);
 		void loadVer7(QByteArray&, QTreeWidgetItem*);
 	private slots:
 		void treeContextMenu();

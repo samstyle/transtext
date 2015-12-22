@@ -11,7 +11,8 @@ QT += widgets
 # Input
 HEADERS += base.h mainwin.h filetypes.h
 FORMS += mainwin.ui
-SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp
+SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp \
+    enm.cpp
 RESOURCES += resources.qrc
 
 DISTFILES +=

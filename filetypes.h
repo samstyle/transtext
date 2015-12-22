@@ -5,5 +5,6 @@
 
 TPage loadKS(QString);
 TPage loadSNX(QString);
+TPage loadEnmon(QString);
 
 #endif // FILETYPES_H
