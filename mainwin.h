@@ -89,6 +89,7 @@ class MWindow : public QMainWindow {
 		void rowInsert(bool);
 		void pageSplit();
 		void changeIcon();
+		void scrollTo(QModelIndex);
 
 		void newPrj();
 		bool savePrj(QString path = "");

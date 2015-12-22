@@ -54,6 +54,7 @@ MWindow::MWindow() {
 
 	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
+	connect(ui.table,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(scrollTo(QModelIndex)));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
 
@@ -336,6 +337,13 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 	}
 }
 
+void MWindow::scrollTo(QModelIndex idx) {
+	ui.widFind->hide();
+	filter("");
+	ui.table->scrollTo(model->index(idx.row(), 0));
+	model->update();
+}
+
 void MWindow::lineUp() {
 	do {
 		curRow--;
@@ -456,43 +464,22 @@ void MWindow::pageSplit() {
 
 // rows actions
 
+bool checkOrder(QModelIndex& idx1, QModelIndex& idx2) {
+	return idx1.row() > idx2.row();
+}
+
 void MWindow::rowDelete() {
 	if (!ui.table->isEnabled()) return;
 	QModelIndexList list = ui.table->selectionModel()->selectedRows();
 	if (list.size() == 0) return;
-	QList<int> rowList;
-	rowList.append(list.first().row());
-	list.removeFirst();
-	int i,row;
-	while (list.size() > 0) {
-		row = list.first().row();
-		if (row > rowList.first()) {
-			rowList.prepend(row);
-		} else if (row < rowList.last()) {
-			rowList.append(row);
-		} else {
-			for (i = 0; i < rowList.size() - 1; i++) {
-				if (row < rowList.at(i)) {
-					rowList.insert(i, row);
-					break;
-				}
-			}
-		}
-		list.removeFirst();
-
+	qSort(list.begin(), list.end(), checkOrder);
+	int row;
+	foreach(QModelIndex idx, list) {
+		row = idx.row();
+		curPage->text.removeAt(row);
+		model->removeRow(row);
 	}
-//	row = ui.table->currentIndex().row();
-	row = rowList.last();
-	foreach(i, rowList) {
-		curPage->text.removeAt(i);
-		model->removeRow(i);
-	}
-/*
-	if (row >= model->rowCount())
-		row--;
-*/
-	ui.table->selectRow(row);
-//	ui.table->selectRow(minrow);
+//	ui.table->selectRow(curRow);
 	fillSJMenu();
 	setProgress();
 }
