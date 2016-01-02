@@ -474,14 +474,15 @@ void MWindow::rowDelete() {
 	if (list.size() == 0) return;
 	qSort(list.begin(), list.end(), checkOrder);
 	int row;
+	int zRow = list.last().row();
 	foreach(QModelIndex idx, list) {
 		row = idx.row();
 		curPage->text.removeAt(row);
 		model->removeRow(row);
 	}
-//	ui.table->selectRow(curRow);
-	fillSJMenu();
+	curRow = zRow;
 	setProgress();
+	ui.table->selectRow(curRow);
 }
 
 void MWindow::rowInsert(bool before) {

@@ -75,3 +75,8 @@ QVariant TBModel::headerData(int sect,Qt::Orientation orien, int role) const {
 	}
 	return res;
 }
+
+QModelIndex TBModel::index(int row, int column, const QModelIndex&) const {
+	QModelIndex res = createIndex(row, column, (void*)this);
+	return res;
+}

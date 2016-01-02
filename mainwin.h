@@ -18,6 +18,7 @@ class TBModel : public QAbstractTableModel {
 		void updateCell(int,int);
 		void insertRow(int, const QModelIndex& idx = QModelIndex());
 		void removeRow(int, const QModelIndex& idx = QModelIndex());
+		QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
 };
 
 class MWindow : public QMainWindow {
