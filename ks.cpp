@@ -89,7 +89,7 @@ TPage loadKS(QString fnam) {
 	elin.type = TL_TEXT;
 	elin.flag = 0;
 	int pos;
-	QString line;
+	QString line,nline;
 	QString val;
 	ParLine param;
 	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
@@ -97,12 +97,16 @@ TPage loadKS(QString fnam) {
 	while (!file.atEnd()) {
 		line.clear();
 		do {
-			line.append(codec->toUnicode(file.readLine()));
-			line.remove("\r");
-			line.remove("\n");
-			line.remove("\t");
-			line.remove(QDialog::trUtf8("　"));
-			if (line.endsWith("\\")) line = line.left(line.size()-1);
+			nline = codec->toUnicode(file.readLine());
+			//line.append(codec->toUnicode(file.readLine()));
+			nline.remove("\r");
+			nline.remove("\n");
+			nline.remove("\t");
+			nline.remove(QDialog::trUtf8("　"));
+			if (nline.endsWith("\\")) nline = nline.left(line.size()-1);
+			if ((line.size() == 0) || (nline != "@Msgend")) {
+				line.append(nline);
+			}
 			nxtline = line.endsWith("[r]");
 			line.remove("[r]");
 			line.remove("[en]");
@@ -184,6 +188,10 @@ TPage loadKS(QString fnam) {
 					page.text.append(elin);
 					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
 					page.text.append(nlin);
+				} else if (param.com.startsWith("BG_")) {
+					page.text.append(elin);
+					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
+					page.text.append(nlin);
 				} else if (param.com == "bg_") {
 					page.text.append(elin);
 					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"f"));
@@ -198,6 +206,8 @@ TPage loadKS(QString fnam) {
 				} else if (param.com == "jump") {
 					nlin.src.text = QString("[jump %0:%1]").arg(getAttribute(param,"storage")).arg(getAttribute(param,"target"));
 					page.text.append(nlin);
+				} else if (param.com == "Msg") {
+					nlin.src.name = getAttribute(param, "name");
 				} else if (param.com == "select") {
 					page.text.append(elin);
 					nlin.src.text = QString("[select]");

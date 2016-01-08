@@ -373,10 +373,11 @@ TPage loadAbelsoft(QString fnam) {
 	QStringList taglist;
 	QStringList arglist;
 	QStringList argvals;
+	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
 	if (file.open(QFile::ReadOnly)) {
 		page.id = 1;
 		while (!file.atEnd()) {
-			line = QString::fromUtf8(file.readLine());
+			line = codec->toUnicode(file.readLine());
 			line.remove("\r");
 			line.remove("\n");
 			idx = line.indexOf(";");
