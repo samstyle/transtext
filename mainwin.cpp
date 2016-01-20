@@ -253,10 +253,18 @@ void MWindow::findStr(QString str) {
 	ui.leFind->setStyleSheet("");
 	if (!curPage) return;
 	if (str.isEmpty()) return;
-	int row = curRow + 1;
+	int row = (curRow < 0) ? 0 : curRow;
 	int match;
 	int pass = 0;
 	while (1) {
+		if (row >= curPage->text.size()) {
+			if (pass) {
+				ui.leFind->setStyleSheet("QLineEdit {background-color: #ffc0c0;}");
+				break;
+			}
+			row = 0;
+			pass = 1;
+		}
 		match = curPage->text[row].trn.text.contains(str, Qt::CaseInsensitive) || \
 				curPage->text[row].trn.name.contains(str, Qt::CaseInsensitive) || \
 				curPage->text[row].src.text.contains(str, Qt::CaseInsensitive) || \
@@ -266,19 +274,12 @@ void MWindow::findStr(QString str) {
 			break;
 		}
 		row++;
-		if (row >= curPage->text.size()) {
-			if (pass) {
-				ui.leFind->setStyleSheet("QLineEdit {background-color: #ffc0c0;}");
-				break;
-			}
-			row = 0;
-			pass = 1;
-		}
 	}
 }
 
 void MWindow::findNext() {
 	if (ui.leFind->isHidden()) return;
+	lineDown();
 	findStr(ui.leFind->text());
 }
 
