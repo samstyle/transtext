@@ -58,16 +58,15 @@ class MWindow : public QMainWindow {
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 
-//		void loadVer4(QByteArray&, QTreeWidgetItem*);
-//		void loadVer5(QByteArray&, QTreeWidgetItem*);
-//		void loadVer6(QByteArray&, QTreeWidgetItem*);
 		void loadVer7(QByteArray&, QTreeWidgetItem*);
 	private slots:
 		void treeContextMenu();
 		void tbContextMenu();
 		void jumpLine(QAction*);
 		void findUntrn();
-		void filter(QString);
+
+		void findStr(QString);
+		void findNext();
 
 		void appendCbrd();
 		void changePage();
@@ -90,7 +89,7 @@ class MWindow : public QMainWindow {
 		void rowInsert(bool);
 		void pageSplit();
 		void changeIcon();
-		void scrollTo(QModelIndex);
+//		void scrollTo(QModelIndex);
 
 		void newPrj();
 		bool savePrj(QString path = "");

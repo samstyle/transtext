@@ -32,11 +32,6 @@ MWindow::MWindow() {
 
 	ui.widFind->hide();
 
-//	repwin = new QDialog(this);
-//	rui.setupUi(repwin);
-//	connect(rui.butok,SIGNAL(released()),this,SLOT(replace()));
-//	connect(rui.butcan,SIGNAL(released()),repwin,SLOT(hide()));
-
 	connect(ui.actNewProj,SIGNAL(triggered()),this,SLOT(newPrj()));
 	connect(ui.actOpen,SIGNAL(triggered()),this,SLOT(openPrj()));
 	connect(ui.actSave,SIGNAL(triggered()),this,SLOT(saveIt()));
@@ -52,9 +47,11 @@ MWindow::MWindow() {
 	connect(ui.srcname,SIGNAL(textChanged(QString)),this,SLOT(changeSNm(QString)));
 	connect(ui.trnname,SIGNAL(textChanged(QString)),this,SLOT(changeTNm(QString)));
 
+	connect(ui.leFind,SIGNAL(returnPressed()),this,SLOT(findNext()));
+
 	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
-	connect(ui.table,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(scrollTo(QModelIndex)));
+//	connect(ui.table,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(scrollTo(QModelIndex)));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
 
@@ -92,7 +89,7 @@ MWindow::MWindow() {
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
-	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(filter(QString)));
+	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
 
 }
 
@@ -250,22 +247,39 @@ int MWindow::getCurrentRow() {
 	return res;
 }
 
-void MWindow::filter(QString str) {
-	int i;
-	bool match;
-	if (ui.widFind->isHidden() || str.isEmpty()) {
-		for (i = 0; i < ui.table->model()->rowCount(); i++) {
-			ui.table->setRowHidden(i, false);
+// search
+
+void MWindow::findStr(QString str) {
+	ui.leFind->setStyleSheet("");
+	if (!curPage) return;
+	if (str.isEmpty()) return;
+	int row = curRow + 1;
+	int match;
+	int pass = 0;
+	while (1) {
+		match = curPage->text[row].trn.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].trn.name.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].src.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].src.name.contains(str, Qt::CaseInsensitive);
+		if (match) {
+			ui.table->selectRow(row);
+			break;
 		}
-	} else {
-		for (i = 0; i < ui.table->model()->rowCount(); i++) {
-			match = curPage->text[i].trn.text.contains(str, Qt::CaseInsensitive) || \
-				curPage->text[i].trn.name.contains(str, Qt::CaseInsensitive) || \
-				curPage->text[i].src.text.contains(str, Qt::CaseInsensitive) || \
-				curPage->text[i].src.name.contains(str, Qt::CaseInsensitive);
-			ui.table->setRowHidden(i, !match);
+		row++;
+		if (row >= curPage->text.size()) {
+			if (pass) {
+				ui.leFind->setStyleSheet("QLineEdit {background-color: #ffc0c0;}");
+				break;
+			}
+			row = 0;
+			pass = 1;
 		}
 	}
+}
+
+void MWindow::findNext() {
+	if (ui.leFind->isHidden()) return;
+	findStr(ui.leFind->text());
 }
 
 // protected
@@ -292,7 +306,7 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.leFind->setFocus();
 				} else {
 					ui.widFind->hide();
-					filter("");
+//					filter("");
 				}
 				break;
 			case Qt::Key_D:
@@ -330,19 +344,21 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 			case Qt::Key_Escape:
 				if (ui.widFind->isVisible()) {
 					ui.widFind->hide();
-					filter("");
+//					filter("");
 				}
 				break;
 		}
 	}
 }
 
+/*
 void MWindow::scrollTo(QModelIndex idx) {
 	ui.widFind->hide();
-	filter("");
+//	filter("");
 	ui.table->scrollTo(model->index(idx.row(), 0));
 	model->update();
 }
+*/
 
 void MWindow::lineUp() {
 	do {
@@ -553,7 +569,7 @@ void MWindow::changePage() {
 		}
 	}
 	ui.widFind->hide();
-	filter("");
+//	filter("");
 }
 
 void MWindow::changeRow(QItemSelection) {

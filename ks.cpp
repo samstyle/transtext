@@ -1,6 +1,8 @@
 #include <QDialog>
+#include <exception>
 
 #include "base.h"
+
 
 struct Param {
 	QString name;
@@ -19,50 +21,38 @@ ParLine parseKS(QString& line) {
 	int pos;
 	ParLine res;
 	Param par;
-	line.remove(0,1);	// [ @
 	pos = line.indexOf(" ");
 	if (pos < 0) {			// no params
-		pos = line.indexOf("]");
 		wrk = false;
-		if (pos < 0) {
-			pos = line.size();
-		}
+		pos = line.size();
 	}
 	res.com = line.left(pos);
 	line.remove(0,pos+1);
 	while ((line.size() > 0) && wrk) {
-		if (line.startsWith("]")) {
-			line.remove(0,1);
-			wrk = false;
-		} else {
-			pos = line.indexOf("=");
-			if (pos > 0) {
-				par.name = line.left(pos);
-				line.remove(0,pos+1);
-				while (line.startsWith(" ")) line.remove(0,1);
-				par.value.clear();
-				subw = true;
-				while (subw && (line.size() > 0)) {
-					if (line.startsWith("\"")) {
-						quote = !quote;
+		pos = line.indexOf("=");
+		if (pos > 0) {
+			par.name = line.left(pos).trimmed();
+			line.remove(0,pos+1);
+			while (line.startsWith(" ")) line.remove(0,1);
+			par.value.clear();
+			subw = true;
+			while (subw && (line.size() > 0)) {
+				if (line.startsWith("\"")) {
+					quote = !quote;
+				} else {
+					if (quote) {
+						par.value.append(line.at(0));
+					} else if (line.startsWith(" ")) {
+						subw = false;
 					} else {
-						if (quote) {
-							par.value.append(line.at(0));
-						} else if (line.startsWith(" ")) {
-							subw = false;
-						} else if (line.startsWith("]")) {
-							subw = false;
-							wrk = false;
-						} else {
-							par.value.append(line.at(0));
-						}
+						par.value.append(line.at(0));
 					}
-					line.remove(0,1);
 				}
-				res.pars.append(par);
-			} else {
-				wrk = false;
+				line.remove(0,1);
 			}
+			res.pars.append(par);
+		} else {
+			wrk = false;
 		}
 	}
 	return res;
@@ -82,108 +72,107 @@ TPage loadKS(QString fnam) {
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;
 	page.id = getid();
-	TLine nlin;
 	TLine elin;
-	nlin.flag = 0;
-	nlin.type = TL_TEXT;
 	elin.type = TL_TEXT;
 	elin.flag = 0;
+	TLine nlin = elin;
+	TLine tlin = elin;
 	int pos;
-	QString line,nline;
-	QString val;
+	QString line;
+	QString comline;
 	ParLine param;
 	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
-	bool nxtline = false;
 	while (!file.atEnd()) {
-		line.clear();
-		do {
-			nline = codec->toUnicode(file.readLine());
-			//line.append(codec->toUnicode(file.readLine()));
-			nline.remove("\r");
-			nline.remove("\n");
-			nline.remove("\t");
-			nline.remove(QDialog::trUtf8("　"));
-			if (nline.endsWith("\\")) nline = nline.left(line.size()-1);
-			if ((line.size() == 0) || (nline != "@Msgend")) {
-				line.append(nline);
-			}
-			nxtline = line.endsWith("[r]");
-			line.remove("[r]");
-			line.remove("[en]");
-		} while (nxtline && !file.atEnd());
-		while (line.size() > 0) {
-			if (line.startsWith(";")) {	// ; comment
+		line = codec->toUnicode(file.readLine());
+		line.remove("\r");
+		line.remove("\n");
+		line.remove("\t");
+		line.remove(QDialog::trUtf8("　"));
+		tlin.src.text.clear();
+		while(line.size() > 0) {
+			if (line.startsWith(";")) {
 				line.clear();
-			} else if (line.startsWith("*")) {	// *label except of *(something)|
-				val = line.mid(1);
-				if (!val.contains("|") && (val.size() > 1)) {
-					nlin.src.text = QString("== %0").arg(val);
-					page.text.append(elin);
-					page.text.append(nlin);
-					page.text.append(elin);
-				}
-				line.clear();
-			} else if (line.startsWith("[")) {	//  && !line.endsWith(QDialog::trUtf8("」")) && !line.endsWith(QDialog::trUtf8("）"))
-				param = parseKS(line);
-				if (param.com == "name") {
-					nlin.src.name = getAttribute(param,"text");
-				} else if ((param.com == "cg_i") || (param.com == "cg_a")) {
-					page.text.append(elin);
-					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
-					page.text.append(nlin);
-				} else if (param.com == "cg_x") {
-					page.text.append(elin);
-					nlin.src.text = QString("[BGX:%0]").arg(getAttribute(param,"storage"));
-					page.text.append(nlin);
-				} else if (param.com == "cg_a_cyara_lr_on") {
-					page.text.append(elin);
-					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"haikei"));
-					page.text.append(nlin);
-				} else if ((param.com == "haikei") || (param.com == "bg")) {
-					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
-					page.text.append(elin);
-					page.text.append(nlin);
-				} else if (param.com == "jump") {
-					nlin.src.text = QString("[jump %0:%1]").arg(getAttribute(param,"storage")).arg(getAttribute(param,"target"));
-					page.text.append(nlin);
-				} else if (param.com == "link") {
-					nlin.src.name = getAttribute(param,"target");
-				} else if (param.com == "NAME_M") {
-					nlin.src.name = getAttribute(param,"n");
-				} else if ((param.com == "FAID_IN") || (param.com == "TR")) {
-					page.text.append(elin);
-					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"bmp"));
-					page.text.append(nlin);
-				} else if (param.com == "FLASH") {
-					page.text.append(elin);
-					nlin.src.text = QString("[FLASH:%0]").arg(getAttribute(param,"in_bmp"));
-					page.text.append(nlin);
-				} else if (param.com == "SELECT") {
-					page.text.append(elin);
-					nlin.src.text = QString("[select]");
-					page.text.append(nlin);
-					nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file1")).arg(getAttribute(param,"tag1"));
-					nlin.src.text = getAttribute(param,"sel1");
-					if (!nlin.src.name.isEmpty()) page.text.append(nlin);
-					nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file2")).arg(getAttribute(param,"tag2"));
-					nlin.src.text = getAttribute(param,"sel2");
-					if (!nlin.src.name.isEmpty()) page.text.append(nlin);
-					nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file3")).arg(getAttribute(param,"tag3"));
-					nlin.src.text = getAttribute(param,"sel3");
-					if (!nlin.src.name.isEmpty()) page.text.append(nlin);
-					nlin.src.name.clear();
-				} else if (param.com == "msg") {
-					nlin.src.name = getAttribute(param,"name");
-				} else if (param.com == "lcg") {
-					// page.text.append(elin);
-					nlin.src.name.clear();
-					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
-					page.text.append(nlin);
-				} else if (param.com.startsWith("m") && !param.com.startsWith("mw") && (param.pars.size() == 0)) {
-					nlin.src.name = param.com.mid(1);
+			} else if (line.startsWith("[")) {
+				pos = line.indexOf("]");
+				if (pos < 0) {
+					line.clear();
+				} else {
+					comline = line.mid(1, pos-1);
+					line = line.mid(pos+1);
+					param = parseKS(comline);
+					if (param.com == "name") {
+						tlin.src.name = getAttribute(param,"text");
+					} else if ((param.com == "cg_i") || (param.com == "cg_a")) {
+						page.text.append(elin);
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
+						page.text.append(nlin);
+					} else if (param.com == "cg_x") {
+						page.text.append(elin);
+						nlin.src.text = QString("[BGX:%0]").arg(getAttribute(param,"storage"));
+						page.text.append(nlin);
+					} else if (param.com == "cg_a_cyara_lr_on") {
+						page.text.append(elin);
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"haikei"));
+						page.text.append(nlin);
+					} else if ((param.com == "haikei") || (param.com == "bg")) {
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
+						page.text.append(elin);
+						page.text.append(nlin);
+					} else if (param.com == "jump") {
+						nlin.src.text = QString("[jump %0:%1]").arg(getAttribute(param,"storage")).arg(getAttribute(param,"target"));
+						page.text.append(nlin);
+					} else if (param.com == "link") {
+						nlin.src.name = getAttribute(param,"target");
+					} else if (param.com.startsWith("CH_NAME")) {
+						tlin.src.name = getAttribute(param,"name");
+					} else if (param.com == "NAME_M") {
+						tlin.src.name = getAttribute(param,"n");
+					} else if ((param.com == "FAID_IN") || (param.com == "TR")) {
+						page.text.append(elin);
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"bmp"));
+						page.text.append(nlin);
+					} else if ((param.com == "FAID_IN_CG") || (param.com == "ALL_OFF")) {
+						page.text.append(elin);
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"back_cg"));
+						page.text.append(nlin);
+					} else if (param.com == "FLASH") {
+						page.text.append(elin);
+						nlin.src.text = QString("[FLASH:%0]").arg(getAttribute(param,"in_bmp"));
+						page.text.append(nlin);
+					} else if (param.com == "SELECT") {
+						page.text.append(elin);
+						nlin.src.text = QString("[select]");
+						page.text.append(nlin);
+						nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file1")).arg(getAttribute(param,"tag1"));
+						nlin.src.text = getAttribute(param,"sel1");
+						if (!nlin.src.name.isEmpty()) page.text.append(nlin);
+						nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file2")).arg(getAttribute(param,"tag2"));
+						nlin.src.text = getAttribute(param,"sel2");
+						if (!nlin.src.name.isEmpty()) page.text.append(nlin);
+						nlin.src.name = QString("%0 : %1").arg(getAttribute(param,"file3")).arg(getAttribute(param,"tag3"));
+						nlin.src.text = getAttribute(param,"sel3");
+						if (!nlin.src.name.isEmpty()) page.text.append(nlin);
+						nlin.src.name.clear();
+					} else if (param.com == "msg") {
+						nlin.src.name = getAttribute(param,"name");
+					} else if (param.com == "lcg") {
+						// page.text.append(elin);
+						nlin.src.name.clear();
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
+						page.text.append(nlin);
+					} else if (param.com.startsWith("m") && !param.com.startsWith("mw") && (param.pars.size() == 0)) {
+						tlin.src.name = param.com.mid(1);
+					} else if (param.com == "r") {
+						line.append(codec->toUnicode(file.readLine()));
+						line.remove("\r");
+						line.remove("\n");
+						line.remove("\t");
+						line.remove(QDialog::trUtf8("　"));
+					}
 				}
 			} else if (line.startsWith("@")) {
-				param = parseKS(line);
+				comline = line.mid(1);
+				param = parseKS(comline);
 				if ((param.com == "bg_FI") || (param.com == "E_FI")) {
 					page.text.append(elin);
 					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
@@ -201,13 +190,13 @@ TPage loadKS(QString fnam) {
 					nlin.src.text = QString("[FLASH BG:%0]").arg(getAttribute(param,"storage"));
 					page.text.append(nlin);
 				} else if (param.com == "name") {
-					nlin.src.name = getAttribute(param,"chara");
-					if (nlin.src.name == QDialog::trUtf8("地")) nlin.src.name.clear();
+					tlin.src.name = getAttribute(param,"chara");
+					if (tlin.src.name == QDialog::trUtf8("地")) tlin.src.name.clear();
 				} else if (param.com == "jump") {
 					nlin.src.text = QString("[jump %0:%1]").arg(getAttribute(param,"storage")).arg(getAttribute(param,"target"));
 					page.text.append(nlin);
 				} else if (param.com == "Msg") {
-					nlin.src.name = getAttribute(param, "name");
+					tlin.src.name = getAttribute(param, "name");
 				} else if (param.com == "select") {
 					page.text.append(elin);
 					nlin.src.text = QString("[select]");
@@ -224,36 +213,36 @@ TPage loadKS(QString fnam) {
 					nlin.src.name = getAttribute(param,"target4");
 					nlin.src.text = getAttribute(param,"text4");
 					if (!nlin.src.name.isEmpty()) page.text.append(nlin);
-					nlin.src.name.clear();
 				}
+				nlin.src.text.clear();
+				line.clear();
+			} else if (line.startsWith("*")) {
+				if (!line.endsWith("|")) {
+					nlin.src.text = QString("== %0").arg(line.mid(1));
+					page.text.append(elin);
+					page.text.append(nlin);
+					page.text.append(elin);
+				}
+				nlin.src.text.clear();
+				line.clear();
 			} else {
-				if (line.startsWith("[")) {
-					pos = line.indexOf("]");
-					if (pos > 0) {
-						nlin.src.name = line.mid(1,pos-1);
-						line.remove(0,pos+1);
-						pos = nlin.src.name.indexOf("/");
-						if (pos > 0) nlin.src.name = nlin.src.name.left(pos);
-					}
-				}
 				pos = line.indexOf("[");
-				if (pos > 0) {
-					nlin.src.text = line.left(pos);
-					line.remove(0,pos);
-				} else {
-					nlin.src.text = line;
+				if (pos < 0) {
+					comline = line;
 					line.clear();
+				} else {
+					comline = line.left(pos);
+					line = line.mid(pos);
 				}
-				nlin.src.name.remove(QDialog::trUtf8("　"));
-				nlin.src.text.remove(QDialog::trUtf8("　"));
-				if (nlin.src.text.startsWith(QDialog::trUtf8("「")) && nlin.src.text.endsWith(QDialog::trUtf8("」"))) {
-					nlin.src.text.remove(0,1);
-					nlin.src.text.remove(nlin.src.text.size() - 1, 1);
-				}
-
-				page.text.append(nlin);
-				nlin.src.name.clear();
+				tlin.src.text.append(comline);
 			}
+		}
+		if (!tlin.src.text.isEmpty()) {
+			if (tlin.src.text.startsWith(QDialog::trUtf8("「")) && tlin.src.text.endsWith(QDialog::trUtf8("」"))) {
+				tlin.src.text = tlin.src.text.mid(1, tlin.src.text.size() - 2);
+			}
+			page.text.append(tlin);
+			tlin.src.name.clear();
 		}
 	}
 	return page;
