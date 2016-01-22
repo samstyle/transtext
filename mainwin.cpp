@@ -270,6 +270,7 @@ void MWindow::findStr(QString str) {
 				curPage->text[row].src.text.contains(str, Qt::CaseInsensitive) || \
 				curPage->text[row].src.name.contains(str, Qt::CaseInsensitive);
 		if (match) {
+			curRow = row;
 			ui.table->selectRow(row);
 			break;
 		}
@@ -281,6 +282,37 @@ void MWindow::findNext() {
 	if (ui.leFind->isHidden()) return;
 	lineDown();
 	findStr(ui.leFind->text());
+}
+
+void MWindow::findPrev() {
+	ui.leFind->setStyleSheet("");
+	if (ui.leFind->isHidden()) return;
+	lineUp();
+	QString str = ui.leFind->text();
+	if (str.isEmpty()) return;
+	int row = curRow - 1;
+	int match;
+	int pass = 0;
+	while (1) {
+		if (row < 0) {
+			if (pass) {
+				ui.leFind->setStyleSheet("QLineEdit {background-color: #ffc0c0;}");
+				break;
+			}
+			row = model->rowCount() - 1;
+			pass = 1;
+		}
+		match = curPage->text[row].trn.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].trn.name.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].src.text.contains(str, Qt::CaseInsensitive) || \
+				curPage->text[row].src.name.contains(str, Qt::CaseInsensitive);
+		if (match) {
+			curRow = row;
+			ui.table->selectRow(row);
+			break;
+		}
+		row--;
+	}
 }
 
 // protected
@@ -337,36 +369,36 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				rowInsert(false);
 				break;
 			case Qt::Key_Up:
-				lineUp();
+				if (ui.leFind->isVisible()) {
+					findPrev();
+				} else {
+					lineUp();
+				}
 				break;
 			case Qt::Key_Down:
-				lineDown();
+				if (ui.leFind->isVisible()) {
+					findNext();
+				} else {
+					lineDown();
+				}
 				break;
 			case Qt::Key_Escape:
 				if (ui.widFind->isVisible()) {
 					ui.widFind->hide();
-//					filter("");
+					ui.table->setFocus();
 				}
 				break;
 		}
 	}
 }
 
-/*
-void MWindow::scrollTo(QModelIndex idx) {
-	ui.widFind->hide();
-//	filter("");
-	ui.table->scrollTo(model->index(idx.row(), 0));
-	model->update();
-}
-*/
-
 void MWindow::lineUp() {
 	do {
 		curRow--;
 	} while ((curRow > 0) && ui.table->isRowHidden(curRow));
 	if (curRow < 0) return;
-	ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+	ui.table->selectRow(curRow);
+	// ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MWindow::lineDown() {
@@ -378,7 +410,8 @@ void MWindow::lineDown() {
 		curRow = model->rowCount() - 1;
 	}
 	if (curRow < 0) return;
-	ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+	ui.table->selectRow(curRow);
+	//ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MWindow::closeEvent(QCloseEvent* ev) {

@@ -67,6 +67,7 @@ class MWindow : public QMainWindow {
 
 		void findStr(QString);
 		void findNext();
+		void findPrev();
 
 		void appendCbrd();
 		void changePage();
