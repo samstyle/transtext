@@ -473,9 +473,12 @@ void MWindow::mergePages() {
 		id = itm->data(0, Qt::UserRole).toInt();
 		if (id != 0) {
 			pg = findPage(id);
-			par->text.append(pg->text);
-			delItem(itm);
+			if (pg)
+				par->text.append(pg->text);
 		}
+	}
+	foreach(itm, items) {
+		delItem(itm);
 	}
 	model->update();
 	setProgress();
