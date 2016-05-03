@@ -81,6 +81,8 @@ QStringList splitLine(QString text, QString div) {
 
 void normLine(TLine& line) {
 	QStringList pair;
+	line.src.name.remove(QDialog::trUtf8("　"));
+	line.src.text.remove(QDialog::trUtf8("　"));
 	pair.clear();
 	pair.append(line.src.name);
 	pair.prepend(line.src.text);

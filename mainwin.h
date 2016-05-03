@@ -58,7 +58,7 @@ class MWindow : public QMainWindow {
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 
-		void loadVer7(QByteArray&, QTreeWidgetItem*);
+		void loadVer7(QByteArray&, QTreeWidgetItem*, int baseid = 0);
 	private slots:
 		void treeContextMenu();
 		void tbContextMenu();
@@ -77,7 +77,7 @@ class MWindow : public QMainWindow {
 		void changeSNm(QString);
 		void changeTNm(QString);
 
-		void newDir();
+		void newDir(QString name = "");
 		void delPage();
 		void delItem(QTreeWidgetItem*);
 		void sortTree();
@@ -93,6 +93,7 @@ class MWindow : public QMainWindow {
 //		void scrollTo(QModelIndex);
 
 		void newPrj();
+		void mergePrj(QString path = "");
 		bool savePrj(QString path = "");
 		void saveIt();
 

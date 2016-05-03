@@ -34,6 +34,7 @@ MWindow::MWindow() {
 
 	connect(ui.actNewProj,SIGNAL(triggered()),this,SLOT(newPrj()));
 	connect(ui.actOpen,SIGNAL(triggered()),this,SLOT(openPrj()));
+	connect(ui.actMergePage,SIGNAL(triggered()),this,SLOT(mergePrj()));
 	connect(ui.actSave,SIGNAL(triggered()),this,SLOT(saveIt()));
 	connect(ui.actSaveAs,SIGNAL(triggered()),this,SLOT(savePrj()));
 
@@ -1003,7 +1004,7 @@ void skipUnknown(QDataStream& strm, int type) {
 	}
 }
 
-void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par) {
+void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par, int baseid) {
 	int id;
 	int type;
 	QIcon icon;
@@ -1028,7 +1029,10 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par) {
 				strm >> type;
 				while (type != T7_END) {
 					switch(type) {
-						case TP_ID: strm >> page.id; break;
+						case TP_ID:
+							strm >> page.id;
+							page.id += baseid;
+							break;
 						case TP_FLAG: strm >> page.flag; break;
 						case TP_LINE:
 							lin.type = TL_TEXT;
@@ -1083,7 +1087,10 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par) {
 							while (type != TT_END) {
 								switch(type) {
 									case TT_NAME: strm >> name; break;
-									case TT_PID: strm >> id; break;
+									case TT_PID:
+										strm >> id;
+										id += baseid;
+										break;
 									default: skipUnknown(strm,type); break;
 								}
 								strm >> type;
@@ -1109,27 +1116,48 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par) {
 	}
 }
 
+QByteArray loadPrjData(QString path) {
+	QByteArray arr;
+	QFile file(path);
+	QMessageBox box(QMessageBox::Critical, "Error", "", QMessageBox::Ok);
+	if (file.open(QFile::ReadOnly)) {
+		arr = file.readAll();
+		file.close();
+		if (QDialog::trUtf8(arr.left(3)) != "TRB") {
+			box.setText("Signature error");
+			box.exec();
+			arr.clear();
+		}
+	} else {
+		box.setText("Can't open file");
+		box.exec();
+	}
+	return arr;
+}
+
 void MWindow::openPrj(QString path) {
 	if (path == "") path = QFileDialog::getOpenFileName(this,"Open book","","Book files (*.trb)");
 	if (path == "") return;
-	QFile file(path);
-	if (file.open(QFile::ReadOnly)) {
-		QByteArray data = file.readAll();
-		file.close();
-		if (QDialog::trUtf8(data.left(3)) == "TRB") {
-			prjPath = path;
-			int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
-			qDebug()<<"ver "<<ver;
-			ui.tree->clear();
-			book.clear();
-			QTreeWidgetItem* par = ui.tree->invisibleRootItem();
-			switch (ver) {
-//				case 4: loadVer4(data,par); break;
-//				case 5: loadVer5(data,par); break;
-//				case 6: loadVer6(data,par); break;
-				case 7: loadVer7(data,par); break;
-			}
-		}
+	QByteArray data = loadPrjData(path);
+	if (!data.isEmpty()) {
+		prjPath = path;
+		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
+		qDebug()<<"ver "<<ver;
+		ui.tree->clear();
+		book.clear();
+		QTreeWidgetItem* par = ui.tree->invisibleRootItem();
+		if (ver == 7) loadVer7(data,par);
+	}
+}
+
+void MWindow::mergePrj(QString path) {
+	if (path == "") path = QFileDialog::getOpenFileName(this,"Open book","","Book files (*.trb)");
+	if (path == "") return;
+	QByteArray data = loadPrjData(path);
+	if (!data.isEmpty()) {
+		QTreeWidgetItem* par = getCurrentParent();
+		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
+		if (ver == 7) loadVer7(data, par, getid());
 	}
 }
 
@@ -1396,8 +1424,8 @@ QTreeWidgetItem* MWindow::getCurrentParent() {
 	return par;
 }
 
-void MWindow::newDir() {
-	QString name = QTime::currentTime().toString("hhmmss");
+void MWindow::newDir(QString name) {
+	if (name.isEmpty()) name = QTime::currentTime().toString("hhmmss");
 	QTreeWidgetItem* par = getCurrentParent();
 	addItem(par,name,0);
 }

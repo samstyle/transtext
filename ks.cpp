@@ -213,6 +213,7 @@ TPage loadKS(QString fnam) {
 					nlin.src.name = getAttribute(param,"target4");
 					nlin.src.text = getAttribute(param,"text4");
 					if (!nlin.src.name.isEmpty()) page.text.append(nlin);
+					nlin.src.name.clear();
 				}
 				nlin.src.text.clear();
 				line.clear();

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>886</width>
-    <height>412</height>
+    <width>884</width>
+    <height>410</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,8 +126,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>886</width>
-     <height>18</height>
+     <width>884</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -135,7 +135,10 @@
      <string>&amp;File</string>
     </property>
     <addaction name="actNewProj"/>
+    <addaction name="separator"/>
     <addaction name="actOpen"/>
+    <addaction name="actMergePage"/>
+    <addaction name="separator"/>
     <addaction name="actSave"/>
     <addaction name="actSaveAs"/>
    </widget>
@@ -291,6 +294,11 @@
    </property>
    <property name="text">
     <string>Clear translation</string>
+   </property>
+  </action>
+  <action name="actMergePage">
+   <property name="text">
+    <string>Merge</string>
    </property>
   </action>
  </widget>
