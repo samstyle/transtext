@@ -15,7 +15,6 @@ TPage loadEnmon(QString fnam) {
 	tlin.type = TL_TEXT;
 	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
 	if (file.open(QFile::ReadOnly)) {
-		page.id = 1;
 		while (!file.atEnd()) {
 			line = codec->toUnicode(file.readLine());
 			line.remove("\n");

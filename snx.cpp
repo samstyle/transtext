@@ -30,7 +30,7 @@ TPage loadSNX(QString fname) {
 	int p1 = get4(file);
 	int p2,p3;
 	int len;
-	
+
 	long dataPos = count * 12 + 8;
 	long curPos = 0;
 //	long adr = 0;
@@ -38,26 +38,13 @@ TPage loadSNX(QString fname) {
 	char cbuf[1024];
 	char* sptr;
 	char* dptr;
-	
+
 //	if (dump) printf("; bytecode\n\n");
 
-/*
-	int array[256][256];
-	p1 = -1;
-	while (++p1 < 256) {
-		p2 = -1;
-		while (++p2 < 256) {
-			array[p1][p2] = 0;
-		}
-	}
-*/
 	while (count > 0) {
-//		adr = file.pos();
 		p1 = get4(file);
 		p2 = get4(file);
 		p3 = get4(file);
-//		array[p1][p2]++;
-//		if (dump) printf("%.8X : %.8X %.8X %.8X",adr,p1,p2,p3);
 		if ((p1 == 0x11) && (p2 == 0x02)) {
 			curPos = file.pos();
 			file.seek(dataPos + p3);
@@ -99,23 +86,6 @@ TPage loadSNX(QString fname) {
 //		if (dump) printf("\n");
 		count--;
 	}
-/*
-	if (dump) {
-		printf("\n\n");
-		p1 = -1;
-		while (++p1 < 256) {
-			p2 = -1;
-			while (++p2 < 256) {
-				if (array[p1][p2] > 0) {
-					printf("%.8X %.8X : %i\n",p1,p2,array[p1][p2]);
-				}
-			}
-		}
-	}
-*/
-//	fclose(ifile);
-//	fclose(ofile);
-	
-	page.id = 1;
+
 	return page;
 }

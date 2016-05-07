@@ -44,9 +44,9 @@ class MWindow : public QMainWindow {
 
 		void fillBlock(const QList<TLine>*);
 		void disableTab();
-		QTreeWidgetItem* addItem(QTreeWidgetItem*,QString,int,QIcon = QIcon());
+		QTreeWidgetItem* addItem(QTreeWidgetItem*,QString,QUuid,QIcon = QIcon());
 
-		void setPage(int);
+		void setPage(QUuid);
 		void setProgress();
 		void setEdit(bool);
 
@@ -58,7 +58,7 @@ class MWindow : public QMainWindow {
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 
-		void loadVer7(QByteArray&, QTreeWidgetItem*, int baseid = 0);
+		void loadVer78(QByteArray&, QTreeWidgetItem*);
 	private slots:
 		void treeContextMenu();
 		void tbContextMenu();
@@ -77,20 +77,17 @@ class MWindow : public QMainWindow {
 		void changeSNm(QString);
 		void changeTNm(QString);
 
-		void newDir(QString name = "");
+		void newDir();
 		void delPage();
 		void delItem(QTreeWidgetItem*);
 		void sortTree();
 		void mergePages();
 		void clearTrn();
 
-//		void replace();
-
 		void rowDelete();
 		void rowInsert(bool);
 		void pageSplit();
 		void changeIcon();
-//		void scrollTo(QModelIndex);
 
 		void newPrj();
 		void mergePrj(QString path = "");

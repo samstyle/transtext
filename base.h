@@ -4,13 +4,6 @@
 #include <QtCore>
 #include <QTableWidget>
 
-/*
-#define	COL_BA	QColor(224,255,224)
-#define	COL_BB	QColor(196,224,196)
-#define	COL_S	QColor(255,224,224)
-#define	COL_Z	QColor(224,224,255)
-*/
-
 #define	TL_SRC	0
 #define	TL_TRN	1
 
@@ -28,12 +21,6 @@
 #define	LS_UNTRN	1
 #define	LS_TRN		2
 
-struct TImage {
-	int id;
-	QString name;
-	QByteArray data;
-};
-
 struct TPhrase {
 	QString name;
 	QString text;
@@ -47,7 +34,7 @@ struct TLine {
 };
 
 struct TPage {
-	int id;
+	QUuid id;
 	int flag;
 	int curRow;
 	QString name;
@@ -55,17 +42,15 @@ struct TPage {
 };
 
 void prjInit();
-int getid();
 
 TPage* createPage();
 TPage* addPage(TPage);
 TPage* putPage(TPage);
-TPage* findPage(int);
+TPage* findPage(QUuid);
 TPage loadPage(QString, int);
-void removePage(int);
+void removePage(QUuid);
 
 extern QList<TPage> book;
-extern QList<TImage> bg;
 
 void getCounts(TPage*,int&,int&);
 int getProgress(TPage*);
@@ -73,7 +58,6 @@ void normLine(TLine&);
 
 TPage loadEnmon(QString);
 TPage loadAbelsoft(QString);
-//TPage loadKS(QString);
 TPage loadEAGLS(QString);
 TPage loadSRP(QString);
 

@@ -68,10 +68,9 @@ QString getAttribute(ParLine par, QString name) {
 
 TPage loadKS(QString fnam) {
 	TPage page;
-	page.id = 0;
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;
-	page.id = getid();
+	page.id = QUuid::createUuid();
 	TLine elin;
 	elin.type = TL_TEXT;
 	elin.flag = 0;

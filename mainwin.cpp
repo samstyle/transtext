@@ -151,23 +151,6 @@ void MWindow::fillSJMenu() {
 	}
 }
 
-/*
-void MWindow::replace() {
-	repwin->hide();
-	if (curPage == NULL) return;
-	QString fstr = rui.sfind->text();
-	QString rstr = rui.sreplace->text();
-	if ((fstr == "") || (rstr == "")) return;
-	for (int i = 0; i < curPage->text.size(); i++) {
-		if (curPage->text[i].src.name.contains(fstr)) curPage->text[i].src.name.replace(fstr,rstr);
-		if (curPage->text[i].src.text.contains(fstr)) curPage->text[i].src.text.replace(fstr,rstr);
-		if (curPage->text[i].trn.name.contains(fstr)) curPage->text[i].trn.name.replace(fstr,rstr);
-		if (curPage->text[i].trn.text.contains(fstr)) curPage->text[i].trn.text.replace(fstr,rstr);
-	}
-	model->update();
-}
-*/
-
 void MWindow::appendCbrd() {
 	if (!ui.actGrabCbrd->isChecked()) return;
 	if (curPage == NULL) return;
@@ -185,7 +168,7 @@ void MWindow::sortTree() {
 	ui.tree->sortItems(0,Qt::AscendingOrder);
 }
 
-void MWindow::setPage(int id) {
+void MWindow::setPage(QUuid id) {
 	curPage = findPage(id);
 	model->update();
 }
@@ -319,7 +302,6 @@ void MWindow::findPrev() {
 // protected
 
 void MWindow::keyPressEvent(QKeyEvent* ev) {
-	// int row = getCurrentRow();
 	int pos;
 	QString tx;
 	if (ev->modifiers() & Qt::ControlModifier) {
@@ -340,7 +322,6 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.leFind->setFocus();
 				} else {
 					ui.widFind->hide();
-//					filter("");
 				}
 				break;
 			case Qt::Key_D:
@@ -399,7 +380,6 @@ void MWindow::lineUp() {
 	} while ((curRow > 0) && ui.table->isRowHidden(curRow));
 	if (curRow < 0) return;
 	ui.table->selectRow(curRow);
-	// ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MWindow::lineDown() {
@@ -412,7 +392,6 @@ void MWindow::lineDown() {
 	}
 	if (curRow < 0) return;
 	ui.table->selectRow(curRow);
-	//ui.table->selectionModel()->setCurrentIndex(model->index(curRow,0),QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void MWindow::closeEvent(QCloseEvent* ev) {
@@ -463,16 +442,16 @@ void MWindow::delPage() {
 void MWindow::mergePages() {
 	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
 	if (items.size() < 2) return;
-	int pid = items.first()->data(0, Qt::UserRole).toInt();
-	if (pid == 0) return;
+	QUuid pid(items.first()->data(0, Qt::UserRole).toByteArray());
+	if (pid.isNull()) return;
 	TPage* par = findPage(pid);
 	TPage* pg;
 	items.removeFirst();
 	QTreeWidgetItem* itm;
-	int id;
+	QUuid id;
 	foreach(itm, items) {
-		id = itm->data(0, Qt::UserRole).toInt();
-		if (id != 0) {
+		id = QUuid(itm->data(0, Qt::UserRole).toByteArray());
+		if (id.isNull()) {
 			pg = findPage(id);
 			if (pg)
 				par->text.append(pg->text);
@@ -486,10 +465,10 @@ void MWindow::mergePages() {
 }
 
 void MWindow::delItem(QTreeWidgetItem* item) {
-	int id = item->data(0,Qt::UserRole).toInt();
-	if (id == 0) {
-		for (id = 0; id < item->childCount(); id++) {
-			delItem(item->child(id));
+	QUuid id(item->data(0,Qt::UserRole).toByteArray());
+	if (id.isNull()) {
+		for (int i = 0; i < item->childCount(); i++) {
+			delItem(item->child(i));
 		}
 	} else {
 		removePage(id);
@@ -582,7 +561,7 @@ void MWindow::changePage() {
 			disableTab();
 		} else {
 			curItem = itm;
-			int id = itm->data(0,Qt::UserRole).toInt();
+			QUuid id(itm->data(0,Qt::UserRole).toByteArray());
 			if (id != 0) {
 				if (!curPage || (curPage->id != id)) {
 					setPage(id);
@@ -611,7 +590,6 @@ void MWindow::changePage() {
 }
 
 void MWindow::changeRow(QItemSelection) {
-//	QModelIndexList idx = sel.indexes();
 	int row = getCurrentRow();
 	curRow = row;
 	QString text;
@@ -640,7 +618,6 @@ void MWindow::changeRow(QItemSelection) {
 				text.prepend(QDialog::trUtf8("「")).prepend(ui.srcname->text()).append(QDialog::trUtf8("」"));
 			}
 			if (!ui.actGrabCbrd->isChecked()) clip->setText(text);
-//			ui.transline->setText(text);
 		} else {
 			setEdit(false);
 		}
@@ -699,287 +676,16 @@ void MWindow::newPrj() {
 #define	TBOOK	10
 #define TTREE	11
 
-struct TRBItem {
-	size_t pos;
-	size_t size;
-};
-
-struct TRBHead {
-	union {
-	TRBItem all[256];
-	struct {
-		TRBItem pages;
-		TRBItem tree;
-		TRBItem bg;
-	};
-	};
-};
-
-/*
-void MWindow::loadVer4(QByteArray& data, QTreeWidgetItem* par) {
-	int type;
-	int temp;
-	int count;
-	int i;
-	TPage page;
-	TPage* pageptr;
-	TLine line;
-	QString text;
-	QString name;
-	QBuffer buf;
-	QByteArray bytes;
-	QDataStream stream;
-	data = qUncompress(data.mid(4));
-	buf.setBuffer(&data);
-	buf.open(QIODevice::ReadOnly);
-	stream.setDevice(&buf);
-	while (!stream.atEnd()) {
-		stream >> type;
-		switch(type) {
-			case TNOTE:
-				stream >> name;
-				break;
-			case TPART:
-				stream >> name;
-				stream >> temp;		// id
-				stream >> count;	// txt size (0)
-				for (i = 0; i < count; i++) {
-					stream >> text;	// src
-					stream >> text;	// trn
-					stream >> temp;	// flag
-					stream >> temp;	// id
-					stream >> temp;	// imgid
-				}
-				stream >> count;		// pix count
-				for (i = 0; i < count; i++) {
-					stream >> temp;		// id
-					stream >> text;		// name
-					stream >> bytes;	// img
-				}
-				stream >> text;		// note
-				par = addItem(par,name,0);
-				break;
-			case TEND:
-				par = par->parent();
-				if (!par) par = ui.tree->invisibleRootItem();
-				break;
-			case TPAGE:
-				page.text.clear();
-				stream >> name;
-				stream >> temp;			// id
-				stream >> count;		// size
-				for (i = 0; i < count; i++) {
-					line.src.name.clear();
-					stream >> line.src.text;
-					line.trn.name.clear();
-					stream >> line.trn.text;
-					normLine(line);
-					stream >> temp;		// flag
-					stream >> temp;		// id
-					stream >> temp;		// imgid
-					line.type = TL_TEXT;
-					line.flag = 0;
-					page.text.append(line);
-				}
-				stream >> count;		// pix count
-				for (i = 0; i < count; i++) {
-					stream >> temp;		// id
-					stream >> name;		// name
-					stream >> bytes;	// img
-				}
-				stream >> name;			// notes
-				pageptr = addPage(page);
-				addItem(par,name,pageptr->id);
-				break;
-			case TPIXX:
-				stream >> count;
-				for (i = 0; i < count; i++) {
-					stream >> temp;
-					stream >> text;
-					stream >> bytes;
-				}
-				break;
-		}
-	}
-	buf.close();
-}
-
-void MWindow::loadVer5(QByteArray& data, QTreeWidgetItem* par) {
-	int type;
-	int temp;
-	int count;
-	int i;
-	TPage page;
-	TLine line;
-	QString name;
-	QBuffer buf;
-	QBuffer puf;
-	QByteArray bytes;
-	QDataStream stream;
-	QDataStream strm;
-	prjInit();
-	data.remove(0,4);
-	buf.setBuffer(&data);
-	buf.open(QIODevice::ReadOnly);
-	stream.setDevice(&buf);
-	while (!stream.atEnd()) {
-		stream >> type;		// block type
-		switch (type) {
-			case TBOOK:
-				stream >> temp;		// pages
-				while (temp > 0) {
-					stream >> bytes;	// compress page text
-					bytes = qUncompress(bytes);
-					puf.setBuffer(&bytes);
-					puf.open(QIODevice::ReadOnly);
-					strm.setDevice(&puf);
-					strm >> page.id;
-					strm >> name;
-					page.text.clear();
-					strm >> count;		// text size
-					for (i = 0; i < count; i++) {
-						strm >> line.type;
-						line.flag = 0;
-						strm >> name;		// cond
-						strm >> name;		// selid
-						strm >> name;		// note
-						strm >> line.src.name;
-						strm >> line.src.text;
-						strm >> line.trn.name;
-						strm >> line.trn.text;
-						strm >> name;		// bground;
-						strm >> name;		// prsLeft;
-						strm >> name;		// prsMiddle;
-						strm >> name;		// prsRight;
-						normLine(line);
-						page.text.append(line);
-					}
-					puf.close();
-
-					stream >> count;		// images in page
-					for (i = 0; i < count; i++) {	// uncompress image data
-						stream >> name;		// name
-						stream >> bytes;	// data
-					}
-
-					stream >> count;	// images in page
-					for (i = 0; i < count; i++) {	// uncompress image data
-						stream >> name;		// name;
-						stream >> bytes;	// data;
-					}
-
-					putPage(page);
-					temp--;
-				}
-				break;
-			case TTREE:
-				stream >> bytes;
-				bytes = qUncompress(bytes);
-				puf.setBuffer(&bytes);
-				puf.open(QIODevice::ReadOnly);
-				strm.setDevice(&puf);
-				while(!strm.atEnd()) {
-					strm >> temp;
-					switch (temp) {
-						case TPAGE:
-							strm >> name;
-							strm >> count;
-							addItem(par,name,count);
-							break;
-						case TPART:
-							strm >> name;
-							par = addItem(par,name,0);
-							break;
-						case TEND:
-							par = par->parent();
-							if (!par) par = ui.tree->invisibleRootItem();
-							break;
-					}
-				}
-				puf.close();
-				break;
-		}
-	}
-	buf.close();
-}
-
-void MWindow::loadVer6(QByteArray& data, QTreeWidgetItem* par) {
-	int temp;
-	int count;
-	TLine line;
-	TPage page;
-	QBuffer buf;
-	QString name;
-	QByteArray bytes;
-	QDataStream strm;
-	prjInit();
-	data.remove(0,5);
-	TRBHead* hd = (TRBHead*)data.data();			// header
-
-	qDebug() << hd->pages.pos << hd->pages.size;
-
-	bytes = qUncompress(data.mid(hd->pages.pos,hd->pages.size));	// pages database
-	buf.setBuffer(&bytes);
-	buf.open(QIODevice::ReadOnly);
-	strm.setDevice(&buf);
-	strm >> temp;
-	while (temp > 0) {
-		strm >> page.id;
-		strm >> page.flag;
-		strm >> count;
-		page.text.clear();
-		while (count > 0) {
-			strm >> line.type;
-			strm >> line.flag;
-			strm >> line.src.name;
-			strm >> line.src.text;
-			strm >> line.trn.name;
-			strm >> line.trn.text;
-			page.text.append(line);
-			count--;
-		}
-		putPage(page);
-		temp--;
-	}
-	buf.close();
-
-	qDebug() << hd->tree.pos << hd->tree.size;
-
-	bytes = qUncompress(data.mid(hd->tree.pos,hd->tree.size));	// tree struct
-	buf.setBuffer(&bytes);
-	buf.open(QIODevice::ReadOnly);
-	strm.setDevice(&buf);
-	while(!strm.atEnd()) {
-		strm >> temp;
-		switch (temp) {
-			case TPAGE:
-				strm >> name;
-				strm >> count;
-				addItem(par,name,count);
-				break;
-			case TPART:
-				strm >> name;
-				par = addItem(par,name,0);
-				break;
-			case TEND:
-				par = par->parent();
-				if (!par) par = ui.tree->invisibleRootItem();
-				break;
-		}
-	}
-	buf.close();
-}
-
-*/
-
 #define T7_PAGE	0x3F
 #define	T7_TREE	0x3E
 #define T7_END	0x00
 
-#define TP_ID	0x41		// page id
+#define TP_ID	0x41		// page id (int)
 #define	TL_TYPE	TP_ID
 #define	TP_FLAG	0x42		// page flag
 #define	TL_FLAG	TP_FLAG
+#define TP_UUID	0x43		// page id (uuid)
+
 #define	TP_LINE	0x03
 #define	TL_SN	0x84		// src name
 #define	TL_ST	0x85		// src text
@@ -989,7 +695,8 @@ void MWindow::loadVer6(QByteArray& data, QTreeWidgetItem* par) {
 #define	TT_DIR	0x08
 #define	TT_PAGE	0x09
 #define	TT_NAME	0x8A		// name of (dir/page)
-#define	TT_PID	0x4B		// assotiated page id
+#define	TT_PID	0x4B		// assotiated page id (int)
+#define	TT_UUID	0x4C		// ...or uuid
 #define	TT_ICON	0xCC		// icon
 #define	TT_END	0x0D		// end of current dir list
 
@@ -1004,8 +711,9 @@ void skipUnknown(QDataStream& strm, int type) {
 	}
 }
 
-void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par, int baseid) {
-	int id;
+void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
+	QUuid id;
+	int oldid;
 	int type;
 	QIcon icon;
 	int haveicon;
@@ -1015,7 +723,7 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par, int baseid) {
 	QString name;
 	QBuffer buf;
 	QDataStream strm;
-	prjInit();
+//	prjInit();
 	data.remove(0,4);		// header (TRB7)
 	data = qUncompress(data);	// unpack data
 	buf.setBuffer(&data);
@@ -1030,10 +738,15 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par, int baseid) {
 				while (type != T7_END) {
 					switch(type) {
 						case TP_ID:
-							strm >> page.id;
-							page.id += baseid;
+							strm >> oldid;
+							page.id = QUuid(oldid,0,0,0,0,0,0,0,0,0,0);
 							break;
-						case TP_FLAG: strm >> page.flag; break;
+						case TP_UUID:
+							strm >> page.id;
+							break;
+						case TP_FLAG:
+							strm >> page.flag;
+							break;
 						case TP_LINE:
 							lin.type = TL_TEXT;
 							lin.flag = 0;
@@ -1086,12 +799,19 @@ void MWindow::loadVer7(QByteArray& data, QTreeWidgetItem* par, int baseid) {
 							strm >> type;
 							while (type != TT_END) {
 								switch(type) {
-									case TT_NAME: strm >> name; break;
-									case TT_PID:
-										strm >> id;
-										id += baseid;
+									case TT_NAME:
+										strm >> name;
 										break;
-									default: skipUnknown(strm,type); break;
+									case TT_PID:
+										strm >> oldid;
+										id = QUuid(oldid,0,0,0,0,0,0,0,0,0,0);
+										break;
+									case TT_UUID:
+										strm >> id;
+										break;
+									default:
+										skipUnknown(strm,type);
+										break;
 								}
 								strm >> type;
 							}
@@ -1146,7 +866,10 @@ void MWindow::openPrj(QString path) {
 		ui.tree->clear();
 		book.clear();
 		QTreeWidgetItem* par = ui.tree->invisibleRootItem();
-		if (ver == 7) loadVer7(data,par);
+		if ((ver == 7) || (ver == 8)) {
+			prjInit();
+			loadVer78(data, par);
+		}
 	}
 }
 
@@ -1157,7 +880,9 @@ void MWindow::mergePrj(QString path) {
 	if (!data.isEmpty()) {
 		QTreeWidgetItem* par = getCurrentParent();
 		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
-		if (ver == 7) loadVer7(data, par, getid());
+		if ((ver == 7) || (ver == 8)) {
+			loadVer78(data, par);
+		}
 	}
 }
 
@@ -1188,14 +913,15 @@ void MWindow::saveIt() {
 
 void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 	int i;
-	int id;
+	QUuid id;
 	QTreeWidgetItem* itm;
 	for (i = 0; i < par->childCount(); i++) {
 		itm = par->child(i);
-		id = itm->data(0,Qt::UserRole).toInt();
-		if (id == 0) {
+		id = QUuid(itm->data(0,Qt::UserRole).toByteArray());
+		if (id.isNull()) {
 			strm << (int)TT_DIR;
-			strm << (int)TT_NAME; strm << itm->text(0);
+			strm << (int)TT_NAME;
+			strm << itm->text(0);
 			if (!itm->icon(0).name().contains("folder.png")) {
 				strm << (int)TT_ICON; strm << itm->icon(0);
 			}
@@ -1203,8 +929,10 @@ void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 			saveLeaf7(strm, itm);
 		} else {
 			strm << (int)TT_PAGE;
-			strm << (int)TT_NAME; strm << itm->text(0);
-			strm << (int)TT_PID; strm << (int)id;
+			strm << (int)TT_NAME;
+			strm << itm->text(0);
+			strm << (int)TT_UUID;
+			strm << id;
 			strm << (int)TT_END;
 		}
 	}
@@ -1217,6 +945,7 @@ bool MWindow::savePrj(QString path) {
 
 	QDataStream strm;
 
+	QFileDialog fd;
 	if (path == "") path = QFileDialog::getSaveFileName(this,"Save book",prjPath,"Book files (*.trb)");
 	if (path == "") return false;
 
@@ -1226,21 +955,16 @@ bool MWindow::savePrj(QString path) {
 
 	buf.setBuffer(&data);
 	buf.open(QIODevice::WriteOnly);
-#if 1
-//	int pc,lc;
+
 	TPage page;
 	TLine line;
 	strm.setDevice(&buf);
 	foreach(page, book) {
-//	for(pc = 0; pc < book.size(); pc++) {
-//		page = book.at(pc);
 		strm << (int)T7_PAGE;
-		strm << (int)TP_ID << (int)page.id;
+		strm << (int)TP_UUID << page.id;
 		strm << (int)TP_FLAG << (int)page.flag;
 		foreach(line, page.text) {
-//		for (lc = 0; lc < page.text.size(); lc++) {
-//			line = page.text.at(lc);
-			if (~line.flag & FL_HIDDEN) {
+//			if (~line.flag & FL_HIDDEN) {
 				strm << (int)TP_LINE;
 				strm << (int)TL_TYPE; strm << line.type;
 				strm << (int)TL_FLAG; strm << line.flag;
@@ -1249,7 +973,7 @@ bool MWindow::savePrj(QString path) {
 				strm << (int)TL_TN; strm << line.trn.name;
 				strm << (int)TL_TT; strm << line.trn.text;
 				strm << (int)T7_END;
-			}
+//			}
 		}
 		strm << (int)T7_END;
 	}
@@ -1262,69 +986,6 @@ bool MWindow::savePrj(QString path) {
 	file.write(QString("TRB7").toUtf8());	// signature
 	file.write(data);
 	file.close();
-#else
-	QByteArray cdata;	// compressed block
-	QBuffer cbuf;
-
-	TRBHead hd;
-	memset(&hd,0x00,sizeof(TRBHead));
-
-	cdata.clear();
-	cbuf.setBuffer(&cdata);
-	cbuf.open(QIODevice::WriteOnly);
-	strm.setDevice(&cbuf);
-	strm << book.size();
-	foreach (TPage page, book) {
-		strm << page.id;
-		strm << page.flag;
-		strm << page.text.size();
-		foreach (TLine line, page.text) {
-			strm << line.type;
-			strm << line.flag;
-			strm << line.src.name;
-			strm << line.src.text;
-			strm << line.trn.name;
-			strm << line.trn.text;
-		}
-	}
-	cbuf.close();
-	cdata = qCompress(cdata);
-	hd.pages.pos = buf.pos() + sizeof(TRBHead);
-	hd.pages.size = cdata.size();
-	buf.write(cdata);
-
-	cdata.clear();					// tree structure
-	cbuf.setBuffer(&cdata);
-	cbuf.open(QIODevice::WriteOnly);
-	saveLeaf(ui.tree->invisibleRootItem(),&cbuf);
-	cbuf.close();
-	cdata = qCompress(cdata);
-	hd.tree.pos = buf.pos() + sizeof(TRBHead);
-	hd.tree.size = cdata.size();
-	buf.write(cdata);
-
-	cdata.clear();					// backgrounds
-	cbuf.setBuffer(&cdata);
-	strm.setDevice(&cbuf);
-	strm << bg.size();
-	foreach(TImage img, bg) {
-		strm << img.id;
-		strm << img.name;
-		strm << img.data;
-	}
-	cbuf.close();
-	hd.bg.pos = buf.pos() + sizeof(TRBHead);
-	hd.bg.size = cdata.size();
-	buf.write(cdata);
-
-	buf.close();
-
-	file.write(QString("TRB6").toUtf8());	// signature
-	file.putChar(0x01);			// version
-	file.write((const char*)&hd,sizeof(TRBHead));
-	file.write(data);
-	file.close();
-#endif
 	return true;
 }
 
@@ -1378,7 +1039,8 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 		} else {
 			page = loadPage(path, TL_SRC);
 		}
-		if (page.id != 0) {
+		if (page.text.size() != 0) {
+			page.id = QUuid::createUuid();
 			page.name = QFileInfo(path).baseName();
 			res.append(page);
 		}
@@ -1424,10 +1086,10 @@ QTreeWidgetItem* MWindow::getCurrentParent() {
 	return par;
 }
 
-void MWindow::newDir(QString name) {
-	if (name.isEmpty()) name = QTime::currentTime().toString("hhmmss");
+void MWindow::newDir() {
+//	if (name.isEmpty()) name = QTime::currentTime().toString("hhmmss");
 	QTreeWidgetItem* par = getCurrentParent();
-	addItem(par,name,0);
+	addItem(par,QUuid::createUuid().toString(),0);
 }
 
 // pages
@@ -1439,12 +1101,12 @@ TPage* MWindow::newPage() {
 	return pg;
 }
 
-QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, int id, QIcon icon) {
+QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, QIcon icon) {
 	TPage* page;
 	QTreeWidgetItem* itm = new QTreeWidgetItem();
-	itm->setData(0,Qt::UserRole,id);
+	itm->setData(0,Qt::UserRole,id.toByteArray());
 	if (nam == "") {
-		nam = (id == 0) ? "New dir" : QString("Page ").append(QString::number(id + 1000).right(3));
+		nam = id.toString();
 	}
 	itm->setText(0,nam);
 	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsEditable); // | Qt::ItemIsUserCheckable);

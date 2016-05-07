@@ -5,13 +5,18 @@
 
 MWindow* win;
 QList<TPage> book;
-QList<TImage> bg;
-int maxid = 0;
+//QList<TImage> bg;
+//int maxid = 0;
 
+/*
 int getid() {
+	QUuid id = QUuid::createUuid();
+	qDebug() << id.toString();
+
 	maxid++;
 	return maxid;
 }
+*/
 
 QList<TPage> getBook() {
 	return book;
@@ -19,17 +24,17 @@ QList<TPage> getBook() {
 
 void prjInit() {
 	book.clear();
-	maxid = 0;
+//	maxid = 0;
 }
 
 TPage* putPage(TPage page) {
 	book.append(page);
-	if (page.id >= maxid) maxid = page.id + 1;
+//	if (page.id >= maxid) maxid = page.id + 1;
 	return &book.last();
 }
 
 TPage* addPage(TPage page) {
-	page.id = getid();
+	page.id = QUuid::createUuid();	// getid();
 	book.append(page);
 	return &book.last();
 }
@@ -37,13 +42,13 @@ TPage* addPage(TPage page) {
 TPage* createPage() {
 	TPage page;
 	page.curRow = -1;
-	page.id = getid();
+	page.id = QUuid::createUuid();	// getid();
 	page.text.clear();
 	book.append(page);
 	return &book.last();
 }
 
-void removePage(int id) {
+void removePage(QUuid id) {
 	int i;
 	for (i = 0; i < book.size(); i++) {
 		if (book[i].id == id) {
@@ -358,7 +363,6 @@ TPage loadEAGLS(QString fnam) {
 		line.remove("(e)");
 		parseEAGLine(line,&page,&name);
 	}
-	page.id = 1;
 	return page;
 }
 
@@ -377,7 +381,6 @@ TPage loadAbelsoft(QString fnam) {
 	QStringList argvals;
 	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
 	if (file.open(QFile::ReadOnly)) {
-		page.id = 1;
 		while (!file.atEnd()) {
 			line = codec->toUnicode(file.readLine());
 			line.remove("\r");
@@ -448,7 +451,6 @@ TPage loadPage(QString fnam, int type) {
 	page.text.clear();
 	condStack.clear();
 	if (file.open(QFile::ReadOnly)) {
-		page.id = 1;
 		while (!file.atEnd()) {
 
 			tlin.type = 0;
@@ -559,7 +561,7 @@ int getProgress(TPage* page) {
 	return trans * 100.0 / (double)total;
 }
 
-TPage* findPage(int id) {
+TPage* findPage(QUuid id) {
 	int i;
 	TPage* page = NULL;
 	for (i=0; i<book.size(); i++) {
