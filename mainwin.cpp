@@ -8,6 +8,7 @@
 
 QColor blkcol;
 TPage* curPage = NULL;
+int merger = 0;
 
 MWindow::MWindow() {
 	curPage = NULL;
@@ -723,6 +724,8 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	QString name;
 	QBuffer buf;
 	QDataStream strm;
+	QMap<int, QUuid> map;
+	map.clear();
 //	prjInit();
 	data.remove(0,4);		// header (TRB7)
 	data = qUncompress(data);	// unpack data
@@ -739,7 +742,10 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 					switch(type) {
 						case TP_ID:
 							strm >> oldid;
-							page.id = QUuid(oldid,0,0,0,0,0,0,0,0,0,0);
+							if (!map.contains(oldid)) {
+								map[oldid] = QUuid::createUuid();
+							}
+							page.id = map[oldid];
 							break;
 						case TP_UUID:
 							strm >> page.id;
@@ -784,9 +790,16 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 							strm >> type;
 							while (type != TT_END) {
 								switch(type) {
-									case TT_NAME: strm >> name; break;
-									case TT_ICON: strm >> icon; haveicon = 1; break;
-									default: skipUnknown(strm,type); break;
+									case TT_NAME:
+										strm >> name;
+										break;
+									case TT_ICON:
+										strm >> icon;
+										haveicon = 1;
+										break;
+									default:
+										skipUnknown(strm,type);
+										break;
 								}
 								strm >> type;
 							}
@@ -804,7 +817,10 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 										break;
 									case TT_PID:
 										strm >> oldid;
-										id = QUuid(oldid,0,0,0,0,0,0,0,0,0,0);
+										if (!map.contains(oldid)) {
+											map[oldid] = QUuid::createUuid();
+										}
+										id = map[oldid];
 										break;
 									case TT_UUID:
 										strm >> id;
@@ -881,6 +897,7 @@ void MWindow::mergePrj(QString path) {
 		QTreeWidgetItem* par = getCurrentParent();
 		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
 		if ((ver == 7) || (ver == 8)) {
+			merger++;
 			loadVer78(data, par);
 		}
 	}
@@ -1079,8 +1096,10 @@ void MWindow::openSrc() {
 QTreeWidgetItem* MWindow::getCurrentParent() {
 	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
 	QTreeWidgetItem* par = (rws.size() == 1) ? ui.tree->currentItem() : NULL;
+	QUuid id;
 	if (par) {
-		if (par->data(0,Qt::UserRole).toInt() != 0)
+		id = QUuid(par->data(0,Qt::UserRole).toByteArray());
+		if (!id.isNull())
 			par = par->parent();
 	}
 	return par;
@@ -1103,6 +1122,7 @@ TPage* MWindow::newPage() {
 
 QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, QIcon icon) {
 	TPage* page;
+	QString tip;
 	QTreeWidgetItem* itm = new QTreeWidgetItem();
 	itm->setData(0,Qt::UserRole,id.toByteArray());
 	if (nam == "") {
@@ -1119,7 +1139,11 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 		}
 	} else {
 		page = findPage(id);
-		if (page) itm->setIcon(0,getIcon(page));
+		if (page) {
+			tip = QString("id : %0").arg(page->id.toString());
+			itm->setToolTip(0,tip);
+			itm->setIcon(0,getIcon(page));
+		}
 	}
 
 	if (par == NULL) par = ui.tree->invisibleRootItem();
