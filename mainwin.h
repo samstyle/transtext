@@ -93,6 +93,7 @@ class MWindow : public QMainWindow {
 		void mergePrj(QString path = "");
 		bool savePrj(QString path = "");
 		void saveIt();
+		int saveChanged();
 
 		TPage* newPage();
 		void openSrc();

@@ -8,7 +8,7 @@
 
 QColor blkcol;
 TPage* curPage = NULL;
-int merger = 0;
+int changed = 0;
 
 MWindow::MWindow() {
 	curPage = NULL;
@@ -396,26 +396,32 @@ void MWindow::lineDown() {
 }
 
 void MWindow::closeEvent(QCloseEvent* ev) {
-	if (book.size() != 0) {
-		QMessageBox msg(QMessageBox::Question,"Question","Save @ exit?",QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,this);
-		switch (msg.exec()) {
-			case QMessageBox::Yes:
-				if (savePrj(prjPath)) {
-					ev->accept();
-				} else {
-					ev->ignore();
-				}
-				break;
-			case QMessageBox::No:
-				ev->accept();
-				break;
-			case QMessageBox::Cancel:
-				ev->ignore();
-				break;
-		}
-	} else {
+	if (saveChanged())
 		ev->accept();
+	else
+		ev->ignore();;
+}
+
+int MWindow::saveChanged() {
+	if (!changed) return 1;
+	int res = 0;
+	QMessageBox msg(QMessageBox::Question,"Question","Save @ exit?",QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,this);
+	switch (msg.exec()) {
+		case QMessageBox::Yes:
+			if (savePrj(prjPath)) {
+				res = 1;
+			} else {
+				res = 0;
+			}
+			break;
+		case QMessageBox::No:
+			res = 1;
+			break;
+		case QMessageBox::Cancel:
+			res = 0;
+			break;
 	}
+	return res;
 }
 
 // page
@@ -478,6 +484,7 @@ void MWindow::delItem(QTreeWidgetItem* item) {
 	if (par == NULL) par = ui.tree->invisibleRootItem();
 	if (par->indexOfChild(item) >= 0)
 		par->removeChild(item);
+	changed = 1;
 }
 
 // pix
@@ -517,6 +524,7 @@ void MWindow::rowDelete() {
 	curRow = zRow;
 	setProgress();
 	ui.table->selectRow(curRow);
+	changed = 1;
 }
 
 void MWindow::rowInsert(bool before) {
@@ -527,6 +535,7 @@ void MWindow::rowInsert(bool before) {
 	int row = (curRow < 0) ? 0 : (before ? curRow : curRow + 1);
 	curPage->text.insert(row,line);
 	model->insertRow(row);
+	changed = 1;
 }
 
 // edit block
@@ -587,7 +596,6 @@ void MWindow::changePage() {
 		}
 	}
 	ui.widFind->hide();
-//	filter("");
 }
 
 void MWindow::changeRow(QItemSelection) {
@@ -631,6 +639,7 @@ void MWindow::changeSrc(QString text) {
 	curPage->text[curRow].src.text = text;
 	model->updateCell(curRow,2);
 	setProgress();
+	changed = 1;
 }
 
 void MWindow::changeTrn(QString text) {
@@ -641,6 +650,7 @@ void MWindow::changeTrn(QString text) {
 	setProgress();
 	if (text.contains("[select]"))
 		fillSJMenu();
+	changed = 1;
 }
 
 void MWindow::changeSNm(QString text) {
@@ -649,6 +659,7 @@ void MWindow::changeSNm(QString text) {
 	curPage->text[curRow].src.name = text;
 	model->updateCell(curRow,1);
 	setProgress();
+	changed = 1;
 }
 
 void MWindow::changeTNm(QString text) {
@@ -657,6 +668,7 @@ void MWindow::changeTNm(QString text) {
 	curPage->text[curRow].trn.name = text;
 	model->updateCell(curRow,3);
 	setProgress();
+	changed = 1;
 }
 
 // menu
@@ -726,7 +738,6 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	QDataStream strm;
 	QMap<int, QUuid> map;
 	map.clear();
-//	prjInit();
 	data.remove(0,4);		// header (TRB7)
 	data = qUncompress(data);	// unpack data
 	buf.setBuffer(&data);
@@ -872,6 +883,7 @@ QByteArray loadPrjData(QString path) {
 }
 
 void MWindow::openPrj(QString path) {
+	if (!saveChanged()) return;
 	if (path == "") path = QFileDialog::getOpenFileName(this,"Open book","","Book files (*.trb)");
 	if (path == "") return;
 	QByteArray data = loadPrjData(path);
@@ -882,9 +894,10 @@ void MWindow::openPrj(QString path) {
 		ui.tree->clear();
 		book.clear();
 		QTreeWidgetItem* par = ui.tree->invisibleRootItem();
-		if ((ver == 7) || (ver == 8)) {
+		if (ver == 7) {
 			prjInit();
 			loadVer78(data, par);
+			changed = 0;
 		}
 	}
 }
@@ -896,9 +909,9 @@ void MWindow::mergePrj(QString path) {
 	if (!data.isEmpty()) {
 		QTreeWidgetItem* par = getCurrentParent();
 		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
-		if ((ver == 7) || (ver == 8)) {
-			merger++;
+		if (ver == 7) {
 			loadVer78(data, par);
+			changed = 1;
 		}
 	}
 }
@@ -1003,6 +1016,7 @@ bool MWindow::savePrj(QString path) {
 	file.write(QString("TRB7").toUtf8());	// signature
 	file.write(data);
 	file.close();
+	changed = 0;
 	return true;
 }
 
@@ -1145,8 +1159,8 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 			itm->setIcon(0,getIcon(page));
 		}
 	}
-
 	if (par == NULL) par = ui.tree->invisibleRootItem();
 	par->addChild(itm);
+	changed = 1;
 	return itm;
 }
