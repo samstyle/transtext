@@ -60,6 +60,8 @@ MWindow::MWindow() {
 	treeMenu = new QMenu();
 	treeMenu->addAction(ui.actNewDir);
 	treeMenu->addAction(ui.actNewPage);
+	treeMenu->addSeparator();
+	treeMenu->addAction(ui.actIcon);
 	treeMenu->addAction(ui.actSort);
 	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actMerge);
@@ -71,6 +73,7 @@ MWindow::MWindow() {
 	connect(ui.actDelPage,SIGNAL(triggered()),this,SLOT(delPage()));
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
 	connect(ui.actMerge, SIGNAL(triggered()), this, SLOT(mergePages()));
+	connect(ui.actIcon, SIGNAL(triggered()), this, SLOT(changeIcon()));
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Choises");
@@ -92,6 +95,12 @@ MWindow::MWindow() {
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
+
+	icowin = new QDialog(this);
+	icoui.setupUi(icowin);
+	connect(icoui.list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(setIcon(QListWidgetItem*)));
+	connect(icoui.tbAdd, SIGNAL(released()), this, SLOT(loadIcon()));
+	connect(icoui.tbDel, SIGNAL(released()), this, SLOT(delIcon()));
 
 }
 
@@ -123,6 +132,12 @@ void MWindow::findUntrn() {
 }
 
 void MWindow::treeContextMenu() {
+	if (curItem) {
+		QUuid id(curItem->data(0, roleId).toByteArray());
+		ui.actIcon->setEnabled(id.isNull());
+	} else {
+		ui.actIcon->setEnabled(false);
+	}
 	treeMenu->move(QCursor::pos());
 	treeMenu->show();
 }
@@ -424,17 +439,91 @@ int MWindow::saveChanged() {
 	return res;
 }
 
-// page
+// icon
+
+void MWindow::fillIconList() {
+	icoui.list->clear();
+	TIcon ico;
+	QListWidgetItem* itm;
+	itm = new QListWidgetItem();
+	itm->setToolTip("default");
+	itm->setIcon(QIcon(":/folder.png"));
+	itm->setData(roleId, 0);
+	icoui.list->addItem(itm);
+	foreach (ico, icons) {
+		itm = new QListWidgetItem();
+		itm->setIcon(ico.icon);
+		itm->setToolTip(ico.name);
+		itm->setData(roleId, ico.id.toByteArray());
+		icoui.list->addItem(itm);
+	}
+}
 
 void MWindow::changeIcon() {
-	if (curItem == NULL) return;
-	if (curItem->data(0,Qt::UserRole).toInt() != 0) return;
-	QString path = QFileDialog::getOpenFileName(this,"Select icon");
-	if (path == "") return;
-	QPixmap pxm(path);
-	QIcon icon(pxm.scaled(16,16));
-	curItem->setIcon(0,icon);
+	fillIconList();
+	icowin->show();
 }
+
+void MWindow::loadIcon() {
+	QStringList paths = QFileDialog::getOpenFileNames(icowin, "Select icon(s)");
+	if (paths.isEmpty()) return;
+	QString path;
+	TIcon ico;
+	foreach(path, paths) {
+		ico.id = QUuid::createUuid();
+		ico.icon = QIcon(path);
+		addIcon(ico);
+	}
+	changed = 1;
+	fillIconList();
+}
+
+void rmIconFromTree(QTreeWidgetItem* par, QUuid icoid) {
+	int cnt = par->childCount();
+	QTreeWidgetItem* itm;
+	QUuid id;
+	for (int i = 0; i < cnt; i++) {
+		itm = par->child(i);
+		id = QUuid(itm->data(0, roleId).toByteArray());
+		if (id.isNull()) {
+			id = QUuid(itm->data(0, roleIcon).toByteArray());
+			if (id == icoid) {
+				itm->setData(0, roleIcon, QUuid(0).toByteArray());
+				itm->setIcon(0, QIcon(":/folder.png"));
+			}
+			rmIconFromTree(itm, icoid);
+		}
+	}
+}
+
+void MWindow::delIcon() {
+	QList<QListWidgetItem*> itms = icoui.list->selectedItems();
+	if (itms.size() > 0) changed = 1;
+	QListWidgetItem* itm;
+	QUuid id;
+	foreach(itm, itms) {
+		id = QUuid(itm->data(roleId).toByteArray());
+		if (!id.isNull()) {
+			rmIcon(id);
+			rmIconFromTree(ui.tree->invisibleRootItem(), id);
+		}
+	}
+	fillIconList();
+}
+
+void MWindow::setIcon(QListWidgetItem* itm) {
+	if (!curItem) return;
+	QUuid id = QUuid(itm->data(roleId).toByteArray());
+	QUuid oldid = QUuid(curItem->data(0, roleIcon).toByteArray());
+	if (id != oldid) {
+		changed = 1;
+		curItem->setData(0, roleIcon, id.toByteArray());
+		curItem->setIcon(0, findIcon(id));
+	}
+	icowin->close();
+}
+
+// page
 
 void MWindow::delPage() {
 	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
@@ -680,6 +769,8 @@ void MWindow::newPrj() {
 	prjPath = "";
 }
 
+// load-save
+
 #define TPART	1
 #define TPAGE	2
 #define TNOTE	3
@@ -689,28 +780,35 @@ void MWindow::newPrj() {
 #define	TBOOK	10
 #define TTREE	11
 
-#define T7_PAGE	0x3F
-#define	T7_TREE	0x3E
+#define T7_PAGE	0x3F		// pages
+#define	T7_TREE	0x3E		// book tree
+#define T7_ICON	0x3D		// icons
 #define T7_END	0x00
 
-#define TP_ID	0x41		// page id (int)
-#define	TL_TYPE	TP_ID
+#define TI_ID	0x40		// uuid
+#define TI_NAME	0x80		// name
+#define TI_ICO	0xc0		// icon
+#define TI_END	0x01
+
+#define TP_ID	0x41		// page id (old)
 #define	TP_FLAG	0x42		// page flag
-#define	TL_FLAG	TP_FLAG
-#define TP_UUID	0x43		// page id (uuid)
+#define TP_UUID	0x43		// page uuid
 
 #define	TP_LINE	0x03
 #define	TL_SN	0x84		// src name
 #define	TL_ST	0x85		// src text
 #define	TL_TN	0x86		// trn name
 #define	TL_TT	0x87		// trn text
+#define	TL_TYPE	TP_ID
+#define	TL_FLAG	TP_FLAG
 
 #define	TT_DIR	0x08
 #define	TT_PAGE	0x09
 #define	TT_NAME	0x8A		// name of (dir/page)
+#define TT_ICON 0xCC		// icon (old)
+#define TT_ICONID 0x4a		// icon uuid
 #define	TT_PID	0x4B		// assotiated page id (int)
 #define	TT_UUID	0x4C		// ...or uuid
-#define	TT_ICON	0xCC		// icon
 #define	TT_END	0x0D		// end of current dir list
 
 void skipUnknown(QDataStream& strm, int type) {
@@ -726,10 +824,11 @@ void skipUnknown(QDataStream& strm, int type) {
 
 void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	QUuid id;
+	QUuid iconid;
+	QIcon icon;
 	int oldid;
 	int type;
-	QIcon icon;
-	int haveicon;
+	TIcon ico;
 	TPage page;
 	page.curRow = -1;
 	TLine lin;
@@ -746,6 +845,26 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	strm >> type;
 	while (!strm.atEnd() && (type != T7_END)) {
 		switch(type) {
+			case T7_ICON:
+				strm >> type;
+				while (type != T7_END) {
+					switch (type) {
+						case TI_ID:
+							strm >> ico.id;
+							break;
+						case TI_ICO:
+							strm >> ico.icon;
+							break;
+						case TI_NAME:
+							strm >> ico.name;
+							break;
+						case TI_END:
+							addIcon(ico);
+							break;
+					}
+					strm >> type;
+				}
+				break;
 			case T7_PAGE:
 				page.text.clear();
 				strm >> type;
@@ -786,7 +905,9 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 							}
 							page.text.append(lin);
 							break;
-						default: skipUnknown(strm,type); break;
+						default:
+							skipUnknown(strm,type);
+							break;
 					}
 					strm >> type;
 				}
@@ -797,7 +918,6 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 				while (type != T7_END) {
 					switch (type) {
 						case TT_DIR:
-							haveicon = 0;
 							strm >> type;
 							while (type != TT_END) {
 								switch(type) {
@@ -806,7 +926,9 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 										break;
 									case TT_ICON:
 										strm >> icon;
-										haveicon = 1;
+										break;
+									case TT_ICONID:
+										strm >> iconid;
 										break;
 									default:
 										skipUnknown(strm,type);
@@ -814,10 +936,8 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 								}
 								strm >> type;
 							}
-							if (haveicon)
-								par = addItem(par,name,0,icon);
-							else
-								par = addItem(par,name,0);
+							par = addItem(par,name,0,iconid);
+							iconid = 0;
 							break;
 						case TT_PAGE:
 							strm >> type;
@@ -835,6 +955,9 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 										break;
 									case TT_UUID:
 										strm >> id;
+										break;
+									case TT_ICON:
+										strm >> icon;
 										break;
 									default:
 										skipUnknown(strm,type);
@@ -916,6 +1039,7 @@ void MWindow::mergePrj(QString path) {
 	}
 }
 
+/*
 void MWindow::saveLeaf(QTreeWidgetItem* par, QBuffer* buf) {
 	int i;
 	int id;
@@ -936,6 +1060,7 @@ void MWindow::saveLeaf(QTreeWidgetItem* par, QBuffer* buf) {
 	}
 	stream << (int)TEND;
 }
+*/
 
 void MWindow::saveIt() {
 	savePrj(prjPath);
@@ -947,22 +1072,17 @@ void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 	QTreeWidgetItem* itm;
 	for (i = 0; i < par->childCount(); i++) {
 		itm = par->child(i);
-		id = QUuid(itm->data(0,Qt::UserRole).toByteArray());
+		id = QUuid(itm->data(0, roleId).toByteArray());
 		if (id.isNull()) {
 			strm << (int)TT_DIR;
-			strm << (int)TT_NAME;
-			strm << itm->text(0);
-			if (!itm->icon(0).name().contains("folder.png")) {
-				strm << (int)TT_ICON; strm << itm->icon(0);
-			}
+			strm << (int)TT_NAME << itm->text(0);
+			strm << (int)TT_ICONID << QUuid(itm->data(0,roleIcon).toByteArray());
 			strm << (int)TT_END;
 			saveLeaf7(strm, itm);
 		} else {
 			strm << (int)TT_PAGE;
-			strm << (int)TT_NAME;
-			strm << itm->text(0);
-			strm << (int)TT_UUID;
-			strm << id;
+			strm << (int)TT_NAME << itm->text(0);
+			strm << (int)TT_UUID << id;
 			strm << (int)TT_END;
 		}
 	}
@@ -1007,6 +1127,17 @@ bool MWindow::savePrj(QString path) {
 		}
 		strm << (int)T7_END;
 	}
+
+	TIcon ico;
+	strm << (int)T7_ICON;
+	foreach(ico, icons) {
+		strm << (int)TI_ID << ico.id;
+		strm << (int)TI_NAME << ico.name;
+		strm << (int)TI_ICO << ico.icon;
+		strm << (int)TI_END;
+	}
+	strm << (int)T7_END;
+
 	strm << (int)T7_TREE;
 	saveLeaf7(strm,ui.tree->invisibleRootItem());
 	strm << (int)T7_END;
@@ -1134,9 +1265,10 @@ TPage* MWindow::newPage() {
 	return pg;
 }
 
-QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, QIcon icon) {
+QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, QUuid iconid) {
 	TPage* page;
 	QString tip;
+	QIcon ico;
 	QTreeWidgetItem* itm = new QTreeWidgetItem();
 	itm->setData(0,Qt::UserRole,id.toByteArray());
 	if (nam == "") {
@@ -1146,11 +1278,9 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsEditable); // | Qt::ItemIsUserCheckable);
 	if (id == 0) {
 		itm->setFlags(itm->flags() | Qt::ItemIsDropEnabled);
-		if (icon.isNull()) {
-			itm->setIcon(0,QIcon(":/folder.png"));
-		} else {
-			itm->setIcon(0,icon);
-		}
+		ico = findIcon(iconid);
+		itm->setIcon(0, ico.isNull() ? QIcon(":/folder.png") : ico);
+		itm->setData(0, roleIcon, iconid.toByteArray());
 	} else {
 		page = findPage(id);
 		if (page) {

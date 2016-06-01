@@ -4,22 +4,28 @@
 #include <QtCore>
 #include <QTableWidget>
 
-#define	TL_SRC	0
-#define	TL_TRN	1
+enum {
+	TL_SRC = 0,
+	TL_TRN
+};
 
-#define	TL_TEXT		1
-#define	TL_SELECT	2
-#define	TL_NOTE		4
-#define TL_SEPARATOR	5
-#define	TL_LABEL	6
-#define	TL_COM		7
+enum {
+	TL_TEXT = 1,
+	TL_SELECT,
+	TL_NOTE,
+	TL_SEPARATOR,
+	TL_LABEL,
+	TL_COM
+};
 
 #define	FL_HIDDEN	1
 #define FL_BOOKMARK	(1 << 1)
 
-#define LS_NONE		0
-#define	LS_UNTRN	1
-#define	LS_TRN		2
+enum {
+	LS_NONE = 0,
+	LS_UNTRN,
+	LS_TRN
+};
 
 struct TPhrase {
 	QString name;
@@ -33,11 +39,18 @@ struct TLine {
 	TPhrase trn;
 };
 
+struct TIcon {
+	QUuid id;
+	QString name;
+	QIcon icon;
+};
+
 struct TPage {
 	QUuid id;
 	int flag;
 	int curRow;
 	QString name;
+	QUuid iconId;
 	QList<TLine> text;
 };
 
@@ -51,6 +64,12 @@ TPage loadPage(QString, int);
 void removePage(QUuid);
 
 extern QList<TPage> book;
+
+QIcon findIcon(QUuid);
+int addIcon(TIcon);
+void rmIcon(QUuid);
+
+extern QList<TIcon> icons;
 
 void getCounts(TPage*,int&,int&);
 int getProgress(TPage*);

@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>884</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -298,7 +298,16 @@
   </action>
   <action name="actMergePage">
    <property name="text">
-    <string>Merge</string>
+    <string>&amp;Merge</string>
+   </property>
+  </action>
+  <action name="actIcon">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icon.png</normaloff>:/icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set icon</string>
    </property>
   </action>
  </widget>

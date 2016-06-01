@@ -4,8 +4,14 @@
 #include <QtGui>
 #include "base.h"
 #include "ui_mainwin.h"
+#include "ui_iconwindow.h"
 
 extern TPage* curPage;
+
+enum {
+	roleId = Qt::UserRole,
+	roleIcon
+};
 
 class TBModel : public QAbstractTableModel {
 	public:
@@ -29,7 +35,10 @@ class MWindow : public QMainWindow {
 		void openPrj(QString path = "");
 	private:
 		Ui::MainWin ui;
-//		Ui::Replacer rui;
+		Ui::IconWin icoui;
+
+		QDialog* icowin;
+
 		int curRow;
 		QTreeWidgetItem* curItem;
 		QString prjPath;
@@ -44,7 +53,7 @@ class MWindow : public QMainWindow {
 
 		void fillBlock(const QList<TLine>*);
 		void disableTab();
-		QTreeWidgetItem* addItem(QTreeWidgetItem*,QString,QUuid,QIcon = QIcon());
+		QTreeWidgetItem* addItem(QTreeWidgetItem*,QString,QUuid,QUuid = QUuid(0));
 
 		void setPage(QUuid);
 		void setProgress();
@@ -87,7 +96,12 @@ class MWindow : public QMainWindow {
 		void rowDelete();
 		void rowInsert(bool);
 		void pageSplit();
+
 		void changeIcon();
+		void fillIconList();
+		void setIcon(QListWidgetItem*);
+		void loadIcon();
+		void delIcon();
 
 		void newPrj();
 		void mergePrj(QString path = "");
