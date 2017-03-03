@@ -113,7 +113,7 @@ TPage loadKS(QString fnam) {
 						page.text.append(elin);
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"haikei"));
 						page.text.append(nlin);
-					} else if ((param.com == "haikei") || (param.com == "bg")) {
+					} else if ((param.com == "haikei") || (param.com == "bg") || (param.com == "ev")) {
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
 						page.text.append(elin);
 						page.text.append(nlin);
@@ -122,8 +122,9 @@ TPage loadKS(QString fnam) {
 						page.text.append(nlin);
 					} else if (param.com == "link") {
 						nlin.src.name = getAttribute(param,"target");
-					} else if (param.com.startsWith("CH_NAME")) {
+					} else if (param.com.startsWith("CH_NAME") || (param.com == "cn")) {
 						tlin.src.name = getAttribute(param,"name");
+						if (tlin.src.name == QObject::trUtf8("ト書き")) tlin.src.name.clear();
 					} else if (param.com == "NAME_M") {
 						tlin.src.name = getAttribute(param,"n");
 					} else if ((param.com == "FAID_IN") || (param.com == "TR")) {
@@ -167,6 +168,11 @@ TPage loadKS(QString fnam) {
 						line.remove("\n");
 						line.remove("\t");
 						line.remove(QDialog::trUtf8("　"));
+					} else if (param.pars.isEmpty() && !line.isEmpty()) {
+						if (param.com.contains(QDialog::trUtf8("/"))) {
+							param.com = param.com.split(QDialog::trUtf8("/")).first();
+						}
+						tlin.src.name = param.com;
 					}
 				}
 			} else if (line.startsWith("@")) {
@@ -180,9 +186,13 @@ TPage loadKS(QString fnam) {
 					page.text.append(elin);
 					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
 					page.text.append(nlin);
-				} else if (param.com == "bg_") {
+				} else if ((param.com == "bg_") || (param.com == "bg")) {
 					page.text.append(elin);
 					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"f"));
+					page.text.append(nlin);
+				} else if  (param.com == "bgf") {
+					page.text.append(elin);
+					nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"bg"));
 					page.text.append(nlin);
 				} else if (param.com == "FLASH") {
 					page.text.append(elin);

@@ -192,7 +192,7 @@ TPage loadAbelsoft(QString fnam) {
 							// do nothing
 						} else {
 							tlin.src.name.clear();
-							tlin.src.text = QString("[").append(taglist.at(idx)).append("]");
+							tlin.src.text = QString("[%0]").arg(taglist.at(idx));
 							page.text.append(tlin);
 						}
 					}

@@ -134,17 +134,15 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 				tlin.src.text.clear();
 				page->text.append(tlin);
 				eamap.clear();
-			} else if ((prs[2] == "00MovPlay.dat") || (prs[2] == "00HMovPlay.dat")) {
+			} else if ((prs[2] == "00MovPlay.dat") || (prs[2] == "00HMovPlay.dat") || (prs[2] == "02Move_BG.dat")) {
 				tlin.type = TL_TEXT;
 				if (eamap.count("_MOVName")) tlin.src.text = QString("[MOV : %1]").arg(eamap["_MOVName"]);
 				else if (eamap.count("_MovieFileName")) tlin.src.text = QString("[MOV : %1]").arg(eamap["_MovieFileName"]);
 				else if (eamap.count("_GRPName")) tlin.src.text = QString("[BG : %1]").arg(eamap["_GRPName"]);
 				page->text.append(tlin);
-			} else if (prs[2] == "01draw.dat") {
-				if ((prs[1] == "DrawCGEX") && (eamap.count("_GRPName") > 0)) {
-					tlin.src.text = QString("[BigBG : %1]").arg(eamap["_GRPName"]);
-					page->text.append(tlin);
-				}
+			} else if ((prs[1] == "DrawCGEX") && (eamap.count("_GRPName") > 0)) {
+				tlin.src.text = QString("[BigBG : %1]").arg(eamap["_GRPName"]);
+				page->text.append(tlin);
 			} else if ((prs[2] == "90examine.dat") && (prs[1] == "examine")) {
 				tlin.type = TL_TEXT;
 				tlin.src.text.clear();
@@ -205,6 +203,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 		tlin.src.name = *name;
 		tlin.src.name.remove(QObject::trUtf8("　"));
 		tlin.src.name.replace(":NameSuffix",QObject::trUtf8("俺"));
+		tlin.src.name = tlin.src.name.split(",").first();
 		name->clear();
 		pos = line.indexOf("\"");
 		if (pos > 0) {
@@ -215,6 +214,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 			}
 			tlin.src.text.remove("(e)");
 			tlin.type = TL_TEXT;
+			tlin.src.text.remove(QObject::trUtf8("　"));
 			page->text.append(tlin);
 			line = line.mid(pos + 1);
 		}

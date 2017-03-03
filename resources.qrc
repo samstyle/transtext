@@ -13,5 +13,7 @@
         <file>clear.png</file>
         <file>icon.png</file>
         <file>add.png</file>
+        <file>ArrDown.png</file>
+        <file>Paperclip.png</file>
     </qresource>
 </RCC>

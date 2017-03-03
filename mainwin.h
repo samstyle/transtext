@@ -2,6 +2,7 @@
 #define _MWINDOW_H
 
 #include <QtGui>
+#include <QFileDialog>
 #include "base.h"
 #include "ui_mainwin.h"
 #include "ui_iconwindow.h"
@@ -38,6 +39,7 @@ class MWindow : public QMainWindow {
 		Ui::IconWin icoui;
 
 		QDialog* icowin;
+		QFileDialog fdial;
 
 		int curRow;
 		QTreeWidgetItem* curItem;

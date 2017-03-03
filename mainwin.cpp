@@ -20,6 +20,8 @@ MWindow::MWindow() {
 	model = new TBModel;
 	ui.table->setModel(model);
 
+	fdial.setOption(QFileDialog::DontUseNativeDialog, true);
+
 	QTableView* tab = ui.table;
 	tab->setColumnWidth(0,20);
 	tab->setColumnWidth(1,50);
@@ -76,7 +78,7 @@ MWindow::MWindow() {
 	connect(ui.actIcon, SIGNAL(triggered()), this, SLOT(changeIcon()));
 
 	tbMenu = new QMenu();
-	sjMenu = tbMenu->addMenu("Choises");
+	sjMenu = tbMenu->addMenu("Labels");
 	bmMenu = tbMenu->addMenu("Bookmarks");
 	tbMenu->addAction(ui.actFindUntrn);
 	tbMenu->addSeparator();
@@ -95,6 +97,8 @@ MWindow::MWindow() {
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
+
+	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
 
 	icowin = new QDialog(this);
 	icoui.setupUi(icowin);
@@ -143,6 +147,7 @@ void MWindow::treeContextMenu() {
 }
 
 void MWindow::tbContextMenu() {
+	fillSJMenu();
 	tbMenu->move(QCursor::pos());
 	tbMenu->show();
 }
@@ -156,13 +161,26 @@ void MWindow::fillSJMenu() {
 	sjMenu->clear();
 	bmMenu->clear();
 	if (!curPage) return;
+	QString txt;
+	TLine* line;
 	int i;
 	for (i = 0; i < curPage->text.size(); i++) {
-		if (curPage->text[i].flag & FL_BOOKMARK) {
+		line = &curPage->text[i];
+		if (line->flag & FL_BOOKMARK) {
 			bmMenu->addAction(QString::number(i))->setData(i);
 		}
-		if (curPage->text[i].src.text.contains("[select]")) {
-			sjMenu->addAction(QString::number(i))->setData(i);
+		if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
+			if (line->trn.text.isEmpty()) {
+				txt = line->src.text;
+			} else {
+				txt = line->trn.text;
+			}
+			txt.remove("==");
+			txt.trimmed();
+			if (!txt.isEmpty()) {
+				txt.prepend(QString("%0 : ").arg(i));
+				sjMenu->addAction(txt)->setData(i);
+			}
 		}
 	}
 }
@@ -194,13 +212,13 @@ QIcon getIcon(TPage* page) {
 	QPainter pnt;
 	int prc = getProgress(page);
 	pnt.begin(&pix);
-	int high = 0.32 * prc;
+	int high = 0.30 * prc;
 	pnt.fillRect(0,0,32,32,Qt::lightGray);
-	pnt.fillRect(0,0,high,8,Qt::green);
-	pnt.fillRect(high,0,32-high,8,Qt::red);
-	pnt.setFont(QFont("FreeSans",15,QFont::Bold));
+	pnt.fillRect(0,0,32,8,Qt::red);
+	pnt.fillRect(1,1,high,6,Qt::green);
+	pnt.setFont(QFont("FreeSans",14,QFont::Bold));
 	pnt.setPen(Qt::black);
-	pnt.drawText(QRect(0,8,32,24),Qt::AlignCenter,QString::number(prc));
+	pnt.drawText(QRect(1,8,30,24),Qt::AlignCenter,QString::number(prc));
 	pnt.end();
 	return QIcon(pix);
 }
@@ -355,7 +373,6 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				if (!curPage) return;
 				curPage->text[curRow].flag ^= FL_BOOKMARK;
 				model->updateCell(curRow, 0);
-				fillSJMenu();
 				break;
 		}
 	} else {
@@ -465,7 +482,7 @@ void MWindow::changeIcon() {
 }
 
 void MWindow::loadIcon() {
-	QStringList paths = QFileDialog::getOpenFileNames(icowin, "Select icon(s)");
+	QStringList paths = fdial.getOpenFileNames(icowin, "Select icon(s)");
 	if (paths.isEmpty()) return;
 	QString path;
 	TIcon ico;
@@ -542,15 +559,23 @@ void MWindow::mergePages() {
 	if (pid.isNull()) return;
 	TPage* par = findPage(pid);
 	TPage* pg;
+	TLine elin, lin;
+	elin.type = TL_TEXT;
+	lin.type = TL_TEXT;
 	items.removeFirst();
 	QTreeWidgetItem* itm;
 	QUuid id;
 	foreach(itm, items) {
 		id = QUuid(itm->data(0, Qt::UserRole).toByteArray());
-		if (id.isNull()) {
+		if (!id.isNull()) {
 			pg = findPage(id);
-			if (pg)
+			if (pg) {
+				lin.src.text = QString(" == Joined : %0").arg(itm->text(0));
+				par->text.append(elin);
+				par->text.append(lin);
+				par->text.append(elin);
 				par->text.append(pg->text);
+			}
 		}
 	}
 	foreach(itm, items) {
@@ -676,7 +701,6 @@ void MWindow::changePage() {
 		}
 	}
 	model->update();
-	fillSJMenu();
 	setProgress();
 	if (curPage) {
 		curRow = curPage->curRow;
@@ -725,6 +749,7 @@ void MWindow::changeRow(QItemSelection) {
 void MWindow::changeSrc(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
+	if (curPage->text[curRow].src.text == text) return;
 	curPage->text[curRow].src.text = text;
 	model->updateCell(curRow,2);
 	setProgress();
@@ -734,17 +759,19 @@ void MWindow::changeSrc(QString text) {
 void MWindow::changeTrn(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
+	if (curPage->text[curRow].trn.text == text) return;
 	curPage->text[curRow].trn.text = text;
 	model->updateCell(curRow,4);
 	setProgress();
-	if (text.contains("[select]"))
-		fillSJMenu();
+//	if (text.contains("[select]"))
+//		fillSJMenu();
 	changed = 1;
 }
 
 void MWindow::changeSNm(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
+	if (curPage->text[curRow].src.name == text) return;
 	curPage->text[curRow].src.name = text;
 	model->updateCell(curRow,1);
 	setProgress();
@@ -754,6 +781,7 @@ void MWindow::changeSNm(QString text) {
 void MWindow::changeTNm(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
+	if (curPage->text[curRow].trn.name == text) return;
 	curPage->text[curRow].trn.name = text;
 	model->updateCell(curRow,3);
 	setProgress();
@@ -811,15 +839,32 @@ void MWindow::newPrj() {
 #define	TT_UUID	0x4C		// ...or uuid
 #define	TT_END	0x0D		// end of current dir list
 
-void skipUnknown(QDataStream& strm, int type) {
-	int tint;
-	QString tstr;
-	QByteArray tarr;
-	switch(type & 0xc0) {
-		case 0x40: strm >> tint; break;
-		case 0x80: strm >> tstr; break;
-		case 0xc0: strm >> tarr; break;
+void idError(int type, int subtype) {
+	QMessageBox msg(QMessageBox::Critical, QString("Error"), QString(), QMessageBox::Ok);
+	switch(type) {
+		case T7_ICON:
+			msg.setText(QString("Unknown ICON id %0").arg(subtype));
+			break;
+		case T7_PAGE:
+			msg.setText(QString("Unknown PAGE id %0").arg(subtype));
+			break;
+		case T7_TREE:
+			msg.setText(QString("Unknown TREE id %0").arg(subtype));
+			break;
+		case TP_LINE:
+			msg.setText(QString("Unknown LINE id %0").arg(subtype));
+			break;
+		case TT_DIR:
+			msg.setText(QString("Unknown TREE.DIR id %0").arg(subtype));
+			break;
+		case TT_PAGE:
+			msg.setText(QString("Unknown TREE.PAGE id %0").arg(subtype));
+			break;
+		default:
+			msg.setText(QString("Unknown GLOBAL id %0:%1").arg(type).arg(subtype));
+			break;
 	}
+	msg.exec();
 }
 
 void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
@@ -843,6 +888,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	buf.open(QIODevice::ReadOnly);
 	strm.setDevice(&buf);
 	strm >> type;
+	int err = 0;
 	while (!strm.atEnd() && (type != T7_END)) {
 		switch(type) {
 			case T7_ICON:
@@ -861,7 +907,12 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 						case TI_END:
 							addIcon(ico);
 							break;
+						default:
+							idError(T7_ICON, type);
+							err = 1;
+							break;
 					}
+					if (err) break;
 					strm >> type;
 				}
 				break;
@@ -899,18 +950,27 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 									case TL_TT: strm >> lin.trn.text; break;
 									case TL_TYPE: strm >> lin.type; break;
 									case TL_FLAG: strm >> lin.flag; break;
-									default: skipUnknown(strm, type); break;
+									default:
+										idError(TP_LINE, type);
+										err = 1;
+										break;
 								}
+								if (err) break;
 								strm >> type;
 							}
+							if (err) break;
+							lin.src.text.remove(QObject::trUtf8("　"));
 							page.text.append(lin);
 							break;
 						default:
-							skipUnknown(strm,type);
+							idError(T7_PAGE, type);
+							err = 1;
 							break;
 					}
+					if (err) break;
 					strm >> type;
 				}
+				if (err) break;
 				putPage(page);
 				break;
 			case T7_TREE:
@@ -931,11 +991,14 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 										strm >> iconid;
 										break;
 									default:
-										skipUnknown(strm,type);
+										idError(TT_DIR, type);
+										err = 1;
 										break;
 								}
+								if (err) break;
 								strm >> type;
 							}
+							if (err) break;
 							par = addItem(par,name,0,iconid);
 							iconid = 0;
 							break;
@@ -960,11 +1023,14 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 										strm >> icon;
 										break;
 									default:
-										skipUnknown(strm,type);
+										idError(TT_PAGE, type);
+										err = 1;
 										break;
 								}
+								if (err) break;
 								strm >> type;
 							}
+							if (err) break;
 							addItem(par,name,id);
 							break;
 						case TT_END:
@@ -972,17 +1038,24 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 							if (par == NULL) par = ui.tree->invisibleRootItem();
 							break;
 						default:
-							skipUnknown(strm,type);
+							idError(T7_TREE, type);
+							err = 1;
 							break;
 					}
+					if (err) break;
 					strm >> type;
 				}
 				break;
 			default:
-				skipUnknown(strm,type);
+				idError(type, 0);
+				err = 1;
 				break;
 		}
+		if (err) break;
 		strm >> type;
+	}
+	if (err) {
+		prjInit();
 	}
 }
 
@@ -1007,7 +1080,7 @@ QByteArray loadPrjData(QString path) {
 
 void MWindow::openPrj(QString path) {
 	if (!saveChanged()) return;
-	if (path == "") path = QFileDialog::getOpenFileName(this,"Open book","","Book files (*.trb)");
+	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)");
 	if (path == "") return;
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
@@ -1026,7 +1099,7 @@ void MWindow::openPrj(QString path) {
 }
 
 void MWindow::mergePrj(QString path) {
-	if (path == "") path = QFileDialog::getOpenFileName(this,"Open book","","Book files (*.trb)");
+	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)");
 	if (path == "") return;
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
@@ -1038,29 +1111,6 @@ void MWindow::mergePrj(QString path) {
 		}
 	}
 }
-
-/*
-void MWindow::saveLeaf(QTreeWidgetItem* par, QBuffer* buf) {
-	int i;
-	int id;
-	QTreeWidgetItem* itm;
-	QDataStream stream(buf);
-	for (i = 0; i < par->childCount(); i++) {
-		itm = par->child(i);
-		id = itm->data(0,Qt::UserRole).toInt();
-		if (id == 0) {
-			stream << (int)TPART;
-			stream << itm->text(0);
-			saveLeaf(itm,buf);
-		} else {
-			stream << (int)TPAGE;
-			stream << itm->text(0);
-			stream << id;
-		}
-	}
-	stream << (int)TEND;
-}
-*/
 
 void MWindow::saveIt() {
 	savePrj(prjPath);
@@ -1074,86 +1124,112 @@ void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 		itm = par->child(i);
 		id = QUuid(itm->data(0, roleId).toByteArray());
 		if (id.isNull()) {
-			strm << (int)TT_DIR;
-			strm << (int)TT_NAME << itm->text(0);
-			strm << (int)TT_ICONID << QUuid(itm->data(0,roleIcon).toByteArray());
-			strm << (int)TT_END;
+			strm << TT_DIR;
+			strm << TT_NAME << itm->text(0);
+			strm << TT_ICONID << QUuid(itm->data(0,roleIcon).toByteArray());
+			strm << TT_END;
 			saveLeaf7(strm, itm);
 		} else {
-			strm << (int)TT_PAGE;
-			strm << (int)TT_NAME << itm->text(0);
-			strm << (int)TT_UUID << id;
-			strm << (int)TT_END;
+			strm << TT_PAGE;
+			strm << TT_NAME << itm->text(0);
+			strm << TT_UUID << id;
+			strm << TT_END;
 		}
 	}
-	strm << (int)TT_END;
+	strm << TT_END;
+}
+
+void savePage(QDataStream& strm, TPage& page) {
+	TLine line;
+	strm << T7_PAGE;
+	strm << TP_UUID << page.id;
+	strm << TP_FLAG << page.flag;
+	foreach(line, page.text) {
+		strm << TP_LINE;
+		strm << TL_TYPE << line.type;
+		strm << TL_FLAG << line.flag;
+		strm << TL_SN << line.src.name;
+		strm << TL_ST << line.src.text;
+		strm << TL_TN << line.trn.name;
+		strm << TL_TT << line.trn.text;
+		strm << T7_END;
+	}
+	strm << T7_END;
+}
+
+void saveTree(QDataStream& strm, QTreeWidgetItem* root) {
+	strm << T7_TREE;
+	saveLeaf7(strm, root);
+	strm << T7_END;
+}
+
+QList<QUuid> getTreeIds(QTreeWidgetItem* root) {
+	QList<QUuid> res;
+	QTreeWidgetItem* itm;
+	QUuid id;
+	for (int i = 0; i < root->childCount(); i++) {
+		itm = root->child(i);
+		id = QUuid(itm->data(0, roleId).toByteArray());
+		if (id.isNull()) {
+			res.append(getTreeIds(itm));
+		} else {
+			res.append(id);
+		}
+	}
+	return res;
 }
 
 bool MWindow::savePrj(QString path) {
 	QByteArray data;	// all data
 	QBuffer buf;
+	if (!path.endsWith(".trb",Qt::CaseInsensitive))
+		path.append(".trb");
 
 	QDataStream strm;
-
-	QFileDialog fd;
-	if (path == "") path = QFileDialog::getSaveFileName(this,"Save book",prjPath,"Book files (*.trb)");
-	if (path == "") return false;
-
-	QFile file(path);
-	if (!file.open(QFile::WriteOnly)) return false;
-	prjPath = path;
 
 	buf.setBuffer(&data);
 	buf.open(QIODevice::WriteOnly);
 
 	TPage page;
-	TLine line;
 	strm.setDevice(&buf);
+
 	foreach(page, book) {
-		strm << (int)T7_PAGE;
-		strm << (int)TP_UUID << page.id;
-		strm << (int)TP_FLAG << (int)page.flag;
-		foreach(line, page.text) {
-//			if (~line.flag & FL_HIDDEN) {
-				strm << (int)TP_LINE;
-				strm << (int)TL_TYPE; strm << line.type;
-				strm << (int)TL_FLAG; strm << line.flag;
-				strm << (int)TL_SN; strm << line.src.name;
-				strm << (int)TL_ST; strm << line.src.text;
-				strm << (int)TL_TN; strm << line.trn.name;
-				strm << (int)TL_TT; strm << line.trn.text;
-				strm << (int)T7_END;
-//			}
-		}
-		strm << (int)T7_END;
+		savePage(strm, page);
 	}
-
 	TIcon ico;
-	strm << (int)T7_ICON;
+	strm << T7_ICON;
 	foreach(ico, icons) {
-		strm << (int)TI_ID << ico.id;
-		strm << (int)TI_NAME << ico.name;
-		strm << (int)TI_ICO << ico.icon;
-		strm << (int)TI_END;
+		strm << TI_ID << ico.id;
+		strm << TI_NAME << ico.name;
+		strm << TI_ICO << ico.icon;
+		strm << TI_END;
 	}
-	strm << (int)T7_END;
+	strm << T7_END;
 
-	strm << (int)T7_TREE;
-	saveLeaf7(strm,ui.tree->invisibleRootItem());
-	strm << (int)T7_END;
+	saveTree(strm, ui.tree->invisibleRootItem());
+
 	buf.close();
 	data = qCompress(data);
 
+	if (path.isEmpty()) {
+		path = fdial.getSaveFileName(this,"Save book",prjPath,"Book files (*.trb)");
+		if (path.isEmpty()) {
+			return false;
+		}
+	}
+	QFile file(path);
+	if (!file.open(QFile::WriteOnly)) return false;
 	file.write(QString("TRB7").toUtf8());	// signature
 	file.write(data);
 	file.close();
+	prjPath = path;
 	changed = 0;
 	return true;
 }
 
 void MWindow::saveSrc() {
 	if (curPage == NULL) return;
-	QString path = QFileDialog::getSaveFileName(this,"Save src text","","All files (*)");
+	QString path = fdial.getSaveFileName(this,"Save src text","","All files (*)");
 	if (path == "") return;
 	QFile file(path);
 	if (file.open(QFile::WriteOnly)) {
@@ -1175,19 +1251,22 @@ void MWindow::saveSrc() {
 QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	QList<TPage> res;
 	QFileDialog qfd;
-	qfd.setNameFilters(QStringList() << "Text files (*)"
-			   << "EAGLS script(*)"
-			   << "KS files (*.ks)"
-			   << "Abelsoft script ADV (*.adv)"
-			   << "Enmon script ENM (*.enm)"
-			   << "SNX engine (*.snx)"
-			   );
+	QStringList filters;
+	qfd.setOption(QFileDialog::DontUseNativeDialog, false);
+	filters << "Text files (*)"
+		<< "EAGLS script(*.txt)"
+		<< "KS files (*.ks)"
+		<< "Abelsoft script ADV (*.adv)"
+		<< "Enmon script ENM (*.enm)"
+		<< "SNX engine (*.snx)";
+	qfd.setNameFilters(filters);
 	qfd.setWindowTitle("Open sources");
 	qfd.setFileMode(mode);
 	if (!qfd.exec())
 		return res;
 	QStringList paths = qfd.selectedFiles();
 	QString path = qfd.selectedNameFilter();
+	qDebug() << path;
 	TPage page;
 	TPage(*callback)(QString) = NULL;
 	if (path.contains("Abelsoft")) callback = &loadAbelsoft;
@@ -1276,7 +1355,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	}
 	itm->setText(0,nam);
 	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsEditable); // | Qt::ItemIsUserCheckable);
-	if (id == 0) {
+	if (id.isNull()) {
 		itm->setFlags(itm->flags() | Qt::ItemIsDropEnabled);
 		ico = findIcon(iconid);
 		itm->setIcon(0, ico.isNull() ? QIcon(":/folder.png") : ico);
@@ -1290,7 +1369,12 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 		}
 	}
 	if (par == NULL) par = ui.tree->invisibleRootItem();
-	par->addChild(itm);
+	int idx = par->indexOfChild(curItem);
+	if (idx < 0) {
+		par->addChild(itm);
+	} else {
+		par->insertChild(idx+1, itm);
+	}
 	changed = 1;
 	return itm;
 }
