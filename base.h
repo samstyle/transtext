@@ -5,6 +5,11 @@
 #include <QTableWidget>
 
 enum {
+	CP_SJIS = 0,
+	CP_UNICODE
+};
+
+enum {
 	TL_SRC = 0,
 	TL_TRN
 };
@@ -18,8 +23,8 @@ enum {
 	TL_COM
 };
 
-#define	FL_HIDDEN	1
-#define FL_BOOKMARK	(1 << 1)
+//#define	FL_HIDDEN	1
+//#define FL_BOOKMARK	(1 << 1)
 
 enum {
 	LS_NONE = 0,
@@ -33,8 +38,9 @@ struct TPhrase {
 };
 
 struct TLine {
-	int type;
-	int flag;
+	int type = TL_TEXT;
+	int flag = 0;
+	QUuid bmrkId;
 	TPhrase src;
 	TPhrase trn;
 };
@@ -54,6 +60,12 @@ struct TPage {
 	QList<TLine> text;
 };
 
+struct TBookmark {
+	QUuid id;
+	QString name;
+	QString descr;
+};
+
 void prjInit();
 
 TPage* createPage();
@@ -71,14 +83,15 @@ void rmIcon(QUuid);
 
 extern QList<TIcon> icons;
 
+TBookmark* findBookmark(QUuid);
+QUuid addBookmark(TBookmark);
+void rmBookmark(QUuid);
+
+extern QList<TBookmark> bookmarks;
+
 void getCounts(TPage*,int&,int&);
 int getProgress(TPage*);
 void normLine(TLine&);
-
-TPage loadEnmon(QString);
-TPage loadAbelsoft(QString);
-TPage loadEAGLS(QString);
-TPage loadSRP(QString);
 
 void normLine(TLine&);
 int getLineStatus(TLine);

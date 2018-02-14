@@ -6,6 +6,7 @@
 #include "base.h"
 #include "ui_mainwin.h"
 #include "ui_iconwindow.h"
+#include "ui_bookmark.h"
 
 extern TPage* curPage;
 
@@ -22,6 +23,7 @@ class TBModel : public QAbstractTableModel {
 		QVariant data(const QModelIndex&, int role = Qt::DisplayRole) const;
 		QVariant headerData(int,Qt::Orientation, int role = Qt::DisplayRole) const;
 		void update();
+		void updateLine(int);
 		void updateCell(int,int);
 		void insertRow(int, const QModelIndex& idx = QModelIndex());
 		void removeRow(int, const QModelIndex& idx = QModelIndex());
@@ -37,8 +39,10 @@ class MWindow : public QMainWindow {
 	private:
 		Ui::MainWin ui;
 		Ui::IconWin icoui;
+		Ui::AddBookmark bmui;
 
 		QDialog* icowin;
+		QDialog* bmwin;
 		QFileDialog fdial;
 
 		int curRow;
@@ -95,6 +99,10 @@ class MWindow : public QMainWindow {
 		void mergePages();
 		void clearTrn();
 
+		void joinLine();
+		void splitLine();
+		void splitName();
+
 		void rowDelete();
 		void rowInsert(bool);
 		void pageSplit();
@@ -104,6 +112,10 @@ class MWindow : public QMainWindow {
 		void setIcon(QListWidgetItem*);
 		void loadIcon();
 		void delIcon();
+
+		void askBookmark();
+		void askRmBookmark();
+		void newBookmark();
 
 		void newPrj();
 		void mergePrj(QString path = "");

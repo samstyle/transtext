@@ -222,7 +222,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 	}
 }
 
-TPage loadEAGLS(QString fnam) {
+TPage loadEAGLS(QString fnam, int cpage) {
 	TPage page;
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;

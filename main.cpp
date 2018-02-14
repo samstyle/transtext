@@ -6,8 +6,7 @@
 MWindow* win;
 QList<TPage> book;
 QList <TIcon> icons;
-//QList<TImage> bg;
-//int maxid = 0;
+QList <TBookmark> bookmarks;
 
 QList<TPage> getBook() {
 	return book;
@@ -16,6 +15,7 @@ QList<TPage> getBook() {
 void prjInit() {
 	book.clear();
 	icons.clear();
+	bookmarks.clear();
 }
 
 TPage* putPage(TPage page) {
@@ -140,15 +140,50 @@ int addIcon(TIcon ico) {
 
 void rmIcon(QUuid id) {
 	for (int i = icons.size() - 1; i >= 0; i--) {
-		if (icons.at(i).id == id) {
+		if (icons.at(i).id == id)
 			icons.removeAt(i);
+	}
+}
+
+// bookmarks
+
+TBookmark* findBookmark(QUuid id) {
+	TBookmark* res = NULL;
+	for (int i = 0; i < bookmarks.size(); i++) {
+		if (bookmarks.at(i).id == id) {
+			res = &bookmarks[i];
 		}
+	}
+	return res;
+}
+
+QUuid addBookmark(TBookmark bm) {
+	TBookmark* tb = NULL;
+	if (bm.id.isNull()) {			// new bookmark
+		bm.id = QUuid::createUuid();
+		bookmarks.append(bm);
+	} else {				// find if exists
+		tb = findBookmark(bm.id);
+		if (!tb) {
+			bookmarks.append(bm);		// not found
+		} else {
+			tb->name = bm.name;		// found: update existing bookmark
+			tb->descr = bm.descr;
+		}
+	}
+	return bm.id;
+}
+
+void rmBookmark(QUuid id) {
+	for (int i = bookmarks.size() - 1; i >= 0; i--) {
+		if (bookmarks.at(i).id == id)
+			bookmarks.removeAt(i);
 	}
 }
 
 // abelsoft scripts
 
-TPage loadAbelsoft(QString fnam) {
+TPage loadAbelsoft(QString fnam, int cpage) {
 	TPage page;
 	QFile file(fnam);
 	QString line;
@@ -308,7 +343,6 @@ int getLineStatus(TLine line) {
 	if (line.type == TL_TEXT) {
 		if (!(line.src.text.startsWith("[") ||
 			(line.src.text.startsWith("==")) ||
-			(line.flag & FL_HIDDEN) ||
 			(line.src.text.isEmpty() && line.src.name.isEmpty()))) {
 				res = LS_UNTRN;
 				if (line.src.text.isEmpty() || !line.trn.text.isEmpty())

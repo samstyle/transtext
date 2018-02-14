@@ -15,5 +15,7 @@
         <file>add.png</file>
         <file>ArrDown.png</file>
         <file>Paperclip.png</file>
+        <file>talk.png</file>
+        <file>bookmark.png</file>
     </qresource>
 </RCC>

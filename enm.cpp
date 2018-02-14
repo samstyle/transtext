@@ -4,7 +4,7 @@
 
 // enmon engine script
 
-TPage loadEnmon(QString fnam) {
+TPage loadEnmon(QString fnam, int cpage) {
 	TPage page;
 	QFile file(fnam);
 	QString line;

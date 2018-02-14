@@ -3,7 +3,6 @@
 
 #include "base.h"
 
-
 struct Param {
 	QString name;
 	QString value;
@@ -66,7 +65,7 @@ QString getAttribute(ParLine par, QString name) {
 	return res;
 }
 
-TPage loadKS(QString fnam) {
+TPage loadKS(QString fnam, int cpage) {
 	TPage page;
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;
@@ -80,7 +79,16 @@ TPage loadKS(QString fnam) {
 	QString line;
 	QString comline;
 	ParLine param;
-	QTextCodec* codec = QTextCodec::codecForName("Shift-JIS");
+	QTextCodec* codec;
+	switch (cpage) {
+		case CP_UNICODE:
+			file.read(3);		// skip BOM
+			codec = QTextCodec::codecForName("UCS-2");
+			break;
+		default:
+			codec = QTextCodec::codecForName("Shift-JIS");
+			break;
+	}
 	while (!file.atEnd()) {
 		line = codec->toUnicode(file.readLine());
 		line.remove("\r");
@@ -101,6 +109,8 @@ TPage loadKS(QString fnam) {
 					param = parseKS(comline);
 					if (param.com == "name") {
 						tlin.src.name = getAttribute(param,"text");
+					} else if (param.com == QDialog::trUtf8("名前")) {
+						tlin.src.name = getAttribute(param,"id");
 					} else if ((param.com == "cg_i") || (param.com == "cg_a")) {
 						page.text.append(elin);
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
@@ -109,11 +119,19 @@ TPage loadKS(QString fnam) {
 						page.text.append(elin);
 						nlin.src.text = QString("[BGX:%0]").arg(getAttribute(param,"storage"));
 						page.text.append(nlin);
+					} else if (param.com == QDialog::trUtf8("イベント")) {
+						nlin.src.text = QString("[BGX:%0]").arg(getAttribute(param,"file"));
+						page.text.append(elin);
+						page.text.append(nlin);
 					} else if (param.com == "cg_a_cyara_lr_on") {
 						page.text.append(elin);
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"haikei"));
 						page.text.append(nlin);
 					} else if ((param.com == "haikei") || (param.com == "bg") || (param.com == "ev")) {
+						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
+						page.text.append(elin);
+						page.text.append(nlin);
+					} else if (param.com == QDialog::trUtf8("背景")) {
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
 						page.text.append(elin);
 						page.text.append(nlin);
@@ -153,6 +171,17 @@ TPage loadKS(QString fnam) {
 						nlin.src.text = getAttribute(param,"sel3");
 						if (!nlin.src.name.isEmpty()) page.text.append(nlin);
 						nlin.src.name.clear();
+					} else if (param.com == "select") {
+						if (param.pars.isEmpty()) {
+							nlin.src.text = "[SELECT]";
+							page.text.append(elin);
+							page.text.append(nlin);
+						} else {
+							nlin.src.name = getAttribute(param, "target");
+							nlin.src.text = getAttribute(param, "text");
+							page.text.append(nlin);
+							nlin.src.name.clear();
+						}
 					} else if (param.com == "msg") {
 						nlin.src.name = getAttribute(param,"name");
 					} else if (param.com == "lcg") {
@@ -160,6 +189,10 @@ TPage loadKS(QString fnam) {
 						nlin.src.name.clear();
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"storage"));
 						page.text.append(nlin);
+					} else if (param.com == QDialog::trUtf8("「")) {
+						line.prepend(QDialog::trUtf8("「"));
+					} else if (param.com == QDialog::trUtf8("（")) {
+						line.prepend(QDialog::trUtf8("（"));
 					} else if (param.com.startsWith("m") && !param.com.startsWith("mw") && (param.pars.size() == 0)) {
 						tlin.src.name = param.com.mid(1);
 					} else if (param.com == "r") {
@@ -168,11 +201,15 @@ TPage loadKS(QString fnam) {
 						line.remove("\n");
 						line.remove("\t");
 						line.remove(QDialog::trUtf8("　"));
-					} else if (param.pars.isEmpty() && !line.isEmpty()) {
-						if (param.com.contains(QDialog::trUtf8("/"))) {
-							param.com = param.com.split(QDialog::trUtf8("/")).first();
-						}
-						tlin.src.name = param.com;
+					//} else if (param.pars.isEmpty() && !line.isEmpty()) {
+					//	if (param.com.contains(QDialog::trUtf8("/"))) {
+					//		param.com = param.com.split(QDialog::trUtf8("/")).first();
+					//	}
+					//	tlin.src.name = param.com;
+					} else if (param.com == "src_end") {
+						page.text.append(elin);
+						nlin.src.text = QString("[JUMP %0]").arg(getAttribute(param,"src"));
+						page.text.append(nlin);
 					}
 				}
 			} else if (line.startsWith("@")) {

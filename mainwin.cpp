@@ -35,6 +35,12 @@ MWindow::MWindow() {
 
 	ui.widFind->hide();
 
+	ui.actAddBookmark->setData(-1);
+	ui.actRmBookmark->setData(-1);
+
+	ui.srcline->addAction(ui.actSplitLine);
+	ui.srcline->addAction(ui.actSplitName);
+
 	connect(ui.actNewProj,SIGNAL(triggered()),this,SLOT(newPrj()));
 	connect(ui.actOpen,SIGNAL(triggered()),this,SLOT(openPrj()));
 	connect(ui.actMergePage,SIGNAL(triggered()),this,SLOT(mergePrj()));
@@ -46,6 +52,9 @@ MWindow::MWindow() {
 	connect(ui.actInsertSrc,SIGNAL(triggered()),this,SLOT(insertSrc()));
 	connect(ui.actSaveSrc,SIGNAL(triggered()),this,SLOT(saveSrc()));
 
+	connect(ui.actSplitLine,SIGNAL(triggered()),this,SLOT(splitLine()));
+	connect(ui.actSplitName,SIGNAL(triggered()),this,SLOT(splitName()));
+
 	connect(ui.srcline,SIGNAL(textChanged(QString)),this,SLOT(changeSrc(QString)));
 	connect(ui.trnline,SIGNAL(textChanged(QString)),this,SLOT(changeTrn(QString)));
 	connect(ui.srcname,SIGNAL(textChanged(QString)),this,SLOT(changeSNm(QString)));
@@ -55,7 +64,6 @@ MWindow::MWindow() {
 
 	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
-//	connect(ui.table,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(scrollTo(QModelIndex)));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
 
@@ -79,8 +87,10 @@ MWindow::MWindow() {
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Labels");
-	bmMenu = tbMenu->addMenu("Bookmarks");
+	bmMenu = tbMenu->addMenu(QIcon(":/bookmark.png"),"Bookmarks");
 	tbMenu->addAction(ui.actFindUntrn);
+	tbMenu->addAction(ui.actSplitName);
+	tbMenu->addAction(ui.actJoinLine);
 	tbMenu->addSeparator();
 	tbMenu->addAction(ui.actSplit);
 	tbMenu->addSeparator();
@@ -91,6 +101,9 @@ MWindow::MWindow() {
 	connect(sjMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
 	connect(bmMenu,SIGNAL(triggered(QAction*)),this,SLOT(jumpLine(QAction*)));
 	connect(ui.actClearTrn,SIGNAL(triggered()),this,SLOT(clearTrn()));
+	connect(ui.actAddBookmark,SIGNAL(triggered()),this,SLOT(askBookmark()));
+	connect(ui.actRmBookmark,SIGNAL(triggered()),this,SLOT(askRmBookmark()));
+	connect(ui.actJoinLine,SIGNAL(triggered()),this,SLOT(joinLine()));
 
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
@@ -105,6 +118,10 @@ MWindow::MWindow() {
 	connect(icoui.list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(setIcon(QListWidgetItem*)));
 	connect(icoui.tbAdd, SIGNAL(released()), this, SLOT(loadIcon()));
 	connect(icoui.tbDel, SIGNAL(released()), this, SLOT(delIcon()));
+
+	bmwin = new QDialog(this);
+	bmui.setupUi(bmwin);
+	connect(bmui.pbAdd, SIGNAL(released()), this, SLOT(newBookmark()));
 
 }
 
@@ -154,20 +171,31 @@ void MWindow::tbContextMenu() {
 
 void MWindow::jumpLine(QAction *act) {
 	int newRow = act->data().toInt();
+	if (newRow < 0) return;
 	ui.table->selectRow(newRow);
 }
 
 void MWindow::fillSJMenu() {
 	sjMenu->clear();
 	bmMenu->clear();
+
+	bmMenu->addAction(ui.actAddBookmark);
+	bmMenu->addAction(ui.actRmBookmark);
+	bmMenu->addSeparator();
+
 	if (!curPage) return;
 	QString txt;
 	TLine* line;
+	TBookmark* bm;
 	int i;
+	ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
 	for (i = 0; i < curPage->text.size(); i++) {
 		line = &curPage->text[i];
-		if (line->flag & FL_BOOKMARK) {
-			bmMenu->addAction(QString::number(i))->setData(i);
+
+		if (!line->bmrkId.isNull()) {
+			bm = findBookmark(line->bmrkId);
+			if (bm != NULL)
+				bmMenu->addAction(bm->name)->setData(i);
 		}
 		if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
 			if (line->trn.text.isEmpty()) {
@@ -176,7 +204,7 @@ void MWindow::fillSJMenu() {
 				txt = line->trn.text;
 			}
 			txt.remove("==");
-			txt.trimmed();
+			txt = txt.trimmed();
 			if (!txt.isEmpty()) {
 				txt.prepend(QString("%0 : ").arg(i));
 				sjMenu->addAction(txt)->setData(i);
@@ -336,8 +364,6 @@ void MWindow::findPrev() {
 // protected
 
 void MWindow::keyPressEvent(QKeyEvent* ev) {
-	int pos;
-	QString tx;
 	if (ev->modifiers() & Qt::ControlModifier) {
 		switch (ev->key()) {
 			case Qt::Key_Insert:
@@ -360,19 +386,12 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				break;
 			case Qt::Key_D:
 				if (ui.srcname->isVisible()) break;
-				tx = ui.srcline->text();
-				pos = tx.indexOf(trUtf8("（"));
-				if (pos > 0) {
-					ui.srcname->setText(tx.left(pos));
-					ui.srcline->setText(tx.mid(pos));
-				}
-				ui.srcname->setVisible(true);
-				ui.trnname->setVisible(true);
+				splitName();
 				break;
 			case Qt::Key_Z:
-				if (!curPage) return;
-				curPage->text[curRow].flag ^= FL_BOOKMARK;
-				model->updateCell(curRow, 0);
+				askBookmark();
+				//curPage->text[curRow].flag ^= FL_BOOKMARK;
+				//model->updateCell(curRow, 0);
 				break;
 		}
 	} else {
@@ -405,6 +424,29 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				break;
 		}
 	}
+}
+
+void MWindow::splitName() {
+	QString tx = ui.srcline->text();
+	int pos = tx.indexOf(trUtf8("（"));
+	if (pos > 0) {
+		if (tx.endsWith(trUtf8("）"))) {
+			// tx.remove(tx.size() - 1, 1);
+			ui.srcname->setText(tx.left(pos));
+			ui.srcline->setText(tx.mid(pos));
+		}
+	} else {
+		pos = tx.indexOf(trUtf8("「"));
+		if (pos > 0) {
+			if (tx.endsWith(trUtf8("」"))) {
+				tx.remove(tx.size() - 1, 1);
+				ui.srcname->setText(tx.left(pos));
+				ui.srcline->setText(tx.mid(pos+1));
+			}
+		}
+	}
+	ui.srcname->setVisible(true);
+	ui.trnname->setVisible(true);
 }
 
 void MWindow::lineUp() {
@@ -540,6 +582,50 @@ void MWindow::setIcon(QListWidgetItem* itm) {
 	icowin->close();
 }
 
+// bookmark
+
+void MWindow::askBookmark() {
+	if (!curPage) return;
+	if (curRow < 0) return;
+	QUuid id = curPage->text.at(curRow).bmrkId;
+	TBookmark* bm = findBookmark(id);
+	if (!bm) {
+		bmui.leid->clear();
+		bmui.lename->clear();
+		bmui.tedescr->clear();
+	} else {
+		bmui.leid->setText(bm->id.toString());
+		bmui.lename->setText(bm->name);
+		bmui.tedescr->setPlainText(bm->descr);
+	}
+	bmui.lepage->setText(curPage->id.toString());
+	bmui.leline->setText(QString::number(curRow));
+	bmwin->show();
+}
+
+void MWindow::newBookmark() {
+	TBookmark bm;
+	bm.id = QUuid();
+	bm.name = bmui.lename->text();
+	bm.descr = bmui.tedescr->toPlainText();
+	if (bm.name.isEmpty()) return;
+	bmwin->close();
+	curPage->text[curRow].bmrkId = addBookmark(bm);
+	model->updateLine(curRow);
+	changed = 1;
+}
+
+void MWindow::askRmBookmark() {
+	if (!curPage) return;
+	if (curRow < 0) return;
+	QUuid id = curPage->text.at(curRow).bmrkId;
+	if (id.isNull()) return;
+	rmBookmark(id);
+	curPage->text[curRow].bmrkId = QUuid(0);
+	model->updateCell(curRow, 0);
+	changed = 1;
+}
+
 // page
 
 void MWindow::delPage() {
@@ -562,6 +648,8 @@ void MWindow::mergePages() {
 	TLine elin, lin;
 	elin.type = TL_TEXT;
 	lin.type = TL_TEXT;
+	lin.flag = 0;
+	elin.flag = 0;
 	items.removeFirst();
 	QTreeWidgetItem* itm;
 	QUuid id;
@@ -570,7 +658,7 @@ void MWindow::mergePages() {
 		if (!id.isNull()) {
 			pg = findPage(id);
 			if (pg) {
-				lin.src.text = QString(" == Joined : %0").arg(itm->text(0));
+				lin.src.text = QString("== Joined : %0").arg(itm->text(0));
 				par->text.append(elin);
 				par->text.append(lin);
 				par->text.append(elin);
@@ -629,9 +717,14 @@ void MWindow::rowDelete() {
 	if (list.size() == 0) return;
 	qSort(list.begin(), list.end(), checkOrder);
 	int row;
+	QUuid id;
 	int zRow = list.last().row();
 	foreach(QModelIndex idx, list) {
 		row = idx.row();
+		id = curPage->text.at(row).bmrkId;
+		if (!id.isNull()) {
+			rmBookmark(id);
+		}
 		curPage->text.removeAt(row);
 		model->removeRow(row);
 	}
@@ -650,6 +743,36 @@ void MWindow::rowInsert(bool before) {
 	curPage->text.insert(row,line);
 	model->insertRow(row);
 	changed = 1;
+}
+
+void MWindow::joinLine() {
+	if (!curPage) return;
+	if (curRow < 0) return;
+	if (curRow > curPage->text.size() - 2) return;
+	TLine tlin = curPage->text[curRow];
+	TLine nlin = curPage->text[curRow + 1];
+	tlin.src.text.append(nlin.src.text);
+	tlin.trn.text.append(nlin.src.text);
+	curPage->text[curRow] = tlin;
+	curPage->text.removeAt(curRow + 1);
+	model->update();
+	ui.table->selectRow(curRow);
+}
+
+void MWindow::splitLine() {
+	if (!curPage) return;
+	if (curRow < 0) return;
+	QString oldtxt = ui.srcline->text();
+	int pos = ui.srcline->cursorPosition();
+	if (pos < 0) return;
+	rowInsert(false);
+	curPage->text[curRow].src.text = oldtxt.left(pos);
+	curPage->text[curRow+1].src.text = oldtxt.mid(pos);
+	ui.srcline->setText(curPage->text[curRow].src.text);
+	model->updateLine(curRow);
+	model->updateLine(curRow+1);
+	ui.table->selectRow(curRow);
+	setProgress();
 }
 
 // edit block
@@ -739,7 +862,7 @@ void MWindow::changeRow(QItemSelection) {
 			if (!ui.srcname->text().isEmpty()) {
 				text.prepend(QDialog::trUtf8("「")).prepend(ui.srcname->text()).append(QDialog::trUtf8("」"));
 			}
-			if (!ui.actGrabCbrd->isChecked()) clip->setText(text);
+			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
 		} else {
 			setEdit(false);
 		}
@@ -763,8 +886,6 @@ void MWindow::changeTrn(QString text) {
 	curPage->text[curRow].trn.text = text;
 	model->updateCell(curRow,4);
 	setProgress();
-//	if (text.contains("[select]"))
-//		fillSJMenu();
 	changed = 1;
 }
 
@@ -811,12 +932,18 @@ void MWindow::newPrj() {
 #define T7_PAGE	0x3F		// pages
 #define	T7_TREE	0x3E		// book tree
 #define T7_ICON	0x3D		// icons
+#define T7_BMRK	0x3C		// bookmarks
 #define T7_END	0x00
 
 #define TI_ID	0x40		// uuid
 #define TI_NAME	0x80		// name
 #define TI_ICO	0xc0		// icon
 #define TI_END	0x01
+
+#define TB_ID	0x40		// id
+#define	TB_NAME	0x41		// name
+#define TB_DSC	0x42		// description
+#define TB_END	0x01
 
 #define TP_ID	0x41		// page id (old)
 #define	TP_FLAG	0x42		// page flag
@@ -827,6 +954,7 @@ void MWindow::newPrj() {
 #define	TL_ST	0x85		// src text
 #define	TL_TN	0x86		// trn name
 #define	TL_TT	0x87		// trn text
+#define TL_BMID	0x88		// bookmark id
 #define	TL_TYPE	TP_ID
 #define	TL_FLAG	TP_FLAG
 
@@ -874,6 +1002,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	int oldid;
 	int type;
 	TIcon ico;
+	TBookmark bm;
 	TPage page;
 	page.curRow = -1;
 	TLine lin;
@@ -895,20 +1024,29 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 				strm >> type;
 				while (type != T7_END) {
 					switch (type) {
-						case TI_ID:
-							strm >> ico.id;
-							break;
-						case TI_ICO:
-							strm >> ico.icon;
-							break;
-						case TI_NAME:
-							strm >> ico.name;
-							break;
-						case TI_END:
-							addIcon(ico);
-							break;
+						case TI_ID: strm >> ico.id; break;
+						case TI_ICO: strm >> ico.icon; break;
+						case TI_NAME: strm >> ico.name; break;
+						case TI_END: addIcon(ico); break;
 						default:
 							idError(T7_ICON, type);
+							err = 1;
+							break;
+					}
+					if (err) break;
+					strm >> type;
+				}
+				break;
+			case T7_BMRK:
+				strm >> type;
+				while (type != T7_END) {
+					switch(type) {
+						case TB_ID: strm >> bm.id; break;
+						case TB_NAME: strm >> bm.name; break;
+						case TB_DSC: strm >> bm.descr; break;
+						case TB_END: addBookmark(bm); break;
+						default:
+							idError(T7_BMRK, type);
 							err = 1;
 							break;
 					}
@@ -937,6 +1075,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 						case TP_LINE:
 							lin.type = TL_TEXT;
 							lin.flag = 0;
+							lin.bmrkId = QUuid();
 							lin.src.name.clear();
 							lin.src.text.clear();
 							lin.trn.name.clear();
@@ -950,6 +1089,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 									case TL_TT: strm >> lin.trn.text; break;
 									case TL_TYPE: strm >> lin.type; break;
 									case TL_FLAG: strm >> lin.flag; break;
+									case TL_BMID: strm >> lin.bmrkId; break;
 									default:
 										idError(TP_LINE, type);
 										err = 1;
@@ -1089,6 +1229,8 @@ void MWindow::openPrj(QString path) {
 		qDebug()<<"ver "<<ver;
 		ui.tree->clear();
 		book.clear();
+		icons.clear();
+		bookmarks.clear();
 		QTreeWidgetItem* par = ui.tree->invisibleRootItem();
 		if (ver == 7) {
 			prjInit();
@@ -1148,6 +1290,7 @@ void savePage(QDataStream& strm, TPage& page) {
 		strm << TP_LINE;
 		strm << TL_TYPE << line.type;
 		strm << TL_FLAG << line.flag;
+		strm << TL_BMID << line.bmrkId;
 		strm << TL_SN << line.src.name;
 		strm << TL_ST << line.src.text;
 		strm << TL_TN << line.trn.name;
@@ -1182,9 +1325,6 @@ QList<QUuid> getTreeIds(QTreeWidgetItem* root) {
 bool MWindow::savePrj(QString path) {
 	QByteArray data;	// all data
 	QBuffer buf;
-	if (!path.endsWith(".trb",Qt::CaseInsensitive))
-		path.append(".trb");
-
 	QDataStream strm;
 
 	buf.setBuffer(&data);
@@ -1196,6 +1336,7 @@ bool MWindow::savePrj(QString path) {
 	foreach(page, book) {
 		savePage(strm, page);
 	}
+
 	TIcon ico;
 	strm << T7_ICON;
 	foreach(ico, icons) {
@@ -1203,6 +1344,16 @@ bool MWindow::savePrj(QString path) {
 		strm << TI_NAME << ico.name;
 		strm << TI_ICO << ico.icon;
 		strm << TI_END;
+	}
+	strm << T7_END;
+
+	TBookmark bm;
+	strm << T7_BMRK;
+	foreach(bm, bookmarks) {
+		strm << TB_ID << bm.id;
+		strm << TB_NAME << bm.name;
+		strm << TB_DSC << bm.descr;
+		strm << TB_END;
 	}
 	strm << T7_END;
 
@@ -1217,6 +1368,8 @@ bool MWindow::savePrj(QString path) {
 			return false;
 		}
 	}
+	if (!path.endsWith(".trb",Qt::CaseInsensitive))
+		path.append(".trb");
 	QFile file(path);
 	if (!file.open(QFile::WriteOnly)) return false;
 	file.write(QString("TRB7").toUtf8());	// signature
@@ -1256,6 +1409,7 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	filters << "Text files (*)"
 		<< "EAGLS script(*.txt)"
 		<< "KS files (*.ks)"
+		<< "KS files Unicode (*.ks)"
 		<< "Abelsoft script ADV (*.adv)"
 		<< "Enmon script ENM (*.enm)"
 		<< "SNX engine (*.snx)";
@@ -1268,7 +1422,9 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	QString path = qfd.selectedNameFilter();
 	qDebug() << path;
 	TPage page;
-	TPage(*callback)(QString) = NULL;
+	int cpage = CP_SJIS;
+	if (path.contains("Unicode")) cpage = CP_UNICODE;
+	TPage(*callback)(QString,int) = NULL;
 	if (path.contains("Abelsoft")) callback = &loadAbelsoft;
 	if (path.contains("Enmon")) callback = &loadEnmon;
 	if (path.contains("KS files")) callback = &loadKS;
@@ -1276,7 +1432,7 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	if (path.contains("SNX")) callback = &loadSNX;
 	foreach(path, paths) {
 		if (callback) {
-			page = callback(path);
+			page = callback(path, cpage);
 		} else {
 			page = loadPage(path, TL_SRC);
 		}
