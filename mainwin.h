@@ -92,6 +92,8 @@ class MWindow : public QMainWindow {
 		void changeSNm(QString);
 		void changeTNm(QString);
 
+		void saveBranch();
+
 		void newDir();
 		void delPage();
 		void delItem(QTreeWidgetItem*);
@@ -119,7 +121,7 @@ class MWindow : public QMainWindow {
 
 		void newPrj();
 		void mergePrj(QString path = "");
-		bool savePrj(QString path = "");
+		bool savePrj(QString path = "", QTreeWidgetItem* = NULL);
 		void saveIt();
 		int saveChanged();
 

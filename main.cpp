@@ -114,7 +114,18 @@ void normLine(TLine& line) {
 
 // icons
 
-QIcon findIcon(QUuid id) {
+TIcon* findIcon(QUuid id) {
+	TIcon* ico = NULL;
+	if (id.isNull()) return ico;
+	for (int i = 0; i < icons.size(); i++) {
+		if (icons.at(i).id == id) {
+			ico = &icons[i];
+		}
+	}
+	return ico;
+}
+
+QIcon getIcon(QUuid id) {
 	if (id.isNull()) return QIcon(":/folder.png");
 	QIcon ico;
 	for (int i = 0; i < icons.size(); i++) {
@@ -130,7 +141,7 @@ int addIcon(TIcon ico) {
 	if (ico.id.isNull()) {
 		ico.id = QUuid::createUuid();
 	}
-	if (findIcon(ico.id).isNull()) {
+	if (getIcon(ico.id).isNull()) {
 		icons.append(ico);
 	} else {
 		res = 0;

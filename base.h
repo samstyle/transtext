@@ -23,9 +23,6 @@ enum {
 	TL_COM
 };
 
-//#define	FL_HIDDEN	1
-//#define FL_BOOKMARK	(1 << 1)
-
 enum {
 	LS_NONE = 0,
 	LS_UNTRN,
@@ -56,7 +53,6 @@ struct TPage {
 	int flag;
 	int curRow;
 	QString name;
-	QUuid iconId;
 	QList<TLine> text;
 };
 
@@ -77,7 +73,8 @@ void removePage(QUuid);
 
 extern QList<TPage> book;
 
-QIcon findIcon(QUuid);
+TIcon* findIcon(QUuid);
+QIcon getIcon(QUuid);
 int addIcon(TIcon);
 void rmIcon(QUuid);
 

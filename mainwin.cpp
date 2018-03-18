@@ -71,6 +71,8 @@ MWindow::MWindow() {
 	treeMenu->addAction(ui.actNewDir);
 	treeMenu->addAction(ui.actNewPage);
 	treeMenu->addSeparator();
+	treeMenu->addAction(ui.actSaveBranch);
+	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actIcon);
 	treeMenu->addAction(ui.actSort);
 	treeMenu->addSeparator();
@@ -80,6 +82,7 @@ MWindow::MWindow() {
 
 	connect(ui.tree,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(treeContextMenu()));
 	connect(ui.actNewDir,SIGNAL(triggered()),this,SLOT(newDir()));
+	connect(ui.actSaveBranch,SIGNAL(triggered()),this,SLOT(saveBranch()));
 	connect(ui.actDelPage,SIGNAL(triggered()),this,SLOT(delPage()));
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
 	connect(ui.actMerge, SIGNAL(triggered()), this, SLOT(mergePages()));
@@ -577,7 +580,7 @@ void MWindow::setIcon(QListWidgetItem* itm) {
 	if (id != oldid) {
 		changed = 1;
 		curItem->setData(0, roleIcon, id.toByteArray());
-		curItem->setIcon(0, findIcon(id));
+		curItem->setIcon(0, getIcon(id));
 	}
 	icowin->close();
 }
@@ -1281,12 +1284,14 @@ void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 	strm << TT_END;
 }
 
-void savePage(QDataStream& strm, TPage& page) {
+void savePage(QDataStream& strm, QUuid id) {
+	TPage* page = findPage(id);
 	TLine line;
+	if (!page) return;
 	strm << T7_PAGE;
-	strm << TP_UUID << page.id;
-	strm << TP_FLAG << page.flag;
-	foreach(line, page.text) {
+	strm << TP_UUID << page->id;
+	strm << TP_FLAG << page->flag;
+	foreach(line, page->text) {
 		strm << TP_LINE;
 		strm << TL_TYPE << line.type;
 		strm << TL_FLAG << line.flag;
@@ -1322,52 +1327,121 @@ QList<QUuid> getTreeIds(QTreeWidgetItem* root) {
 	return res;
 }
 
-bool MWindow::savePrj(QString path) {
+QList<QUuid> getPageBMrk(QUuid id) {
+	QList<QUuid> res;
+	TPage* page = findPage(id);
+	TLine ln;
+	if (page) {
+		foreach(ln, page->text) {
+			if (!ln.bmrkId.isNull())
+				res.append(ln.bmrkId);
+		}
+	}
+	return res;
+}
+
+QList<QUuid> getTreeBMrk(QTreeWidgetItem* root) {
+	QList<QUuid> res;
+	QTreeWidgetItem* itm;
+	QUuid id;
+	for (int i = 0; i < root->childCount(); i++) {
+		itm = root->child(i);
+		id = QUuid(itm->data(0, roleId).toByteArray());
+		if (id.isNull()) {
+			res.append(getTreeBMrk(itm));
+		} else {
+			res.append(getPageBMrk(id));
+		}
+	}
+	return res;
+}
+
+QList<QUuid> getTreeIcons(QTreeWidgetItem* root) {
+	QList<QUuid> res;
+	QTreeWidgetItem* itm;
+	QUuid id;
+	for (int i = 0; i < root->childCount(); i++) {
+		itm = root->child(i);
+		id = QUuid(itm->data(0, roleIcon).toByteArray());
+		if (!id.isNull())
+			res.append(id);
+		id = QUuid(itm->data(0, roleId).toByteArray());
+		if (id.isNull())
+			res.append(getTreeIcons(itm));
+	}
+	return res;
+}
+
+// TODO:save current folder
+void MWindow::saveBranch() {
+	if (!curItem) return;
+	QString tmpath = prjPath;
+	int tmpcha = changed;
+	savePrj(QString(""), curItem);
+	prjPath = tmpath;
+	changed = tmpcha;
+}
+
+bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 	QByteArray data;	// all data
 	QBuffer buf;
 	QDataStream strm;
+	QList<QUuid> idlist;
+	QUuid id;
+	TIcon* ico;
+	TBookmark* bm;
+
+	if (!root)
+		root = ui.tree->invisibleRootItem();
 
 	buf.setBuffer(&data);
 	buf.open(QIODevice::WriteOnly);
 
-	TPage page;
+//	TPage page;
 	strm.setDevice(&buf);
 
-	foreach(page, book) {
-		savePage(strm, page);
+// collect pages for root
+	idlist = getTreeIds(root);
+	foreach(id, idlist) {
+		savePage(strm, id);
 	}
-
-	TIcon ico;
+// collect icons for root
 	strm << T7_ICON;
-	foreach(ico, icons) {
-		strm << TI_ID << ico.id;
-		strm << TI_NAME << ico.name;
-		strm << TI_ICO << ico.icon;
-		strm << TI_END;
+	idlist = getTreeIcons(root);
+	qDebug() << idlist.size() << "icons";
+	foreach(id, idlist) {
+		ico = findIcon(id);
+		if (ico) {
+			strm << TI_ID << ico->id;
+			strm << TI_NAME << ico->name;
+			strm << TI_ICO << ico->icon;
+			strm << TI_END;
+		}
 	}
 	strm << T7_END;
-
-	TBookmark bm;
+// collect bookmarks for root
+	idlist = getTreeBMrk(root);
 	strm << T7_BMRK;
-	foreach(bm, bookmarks) {
-		strm << TB_ID << bm.id;
-		strm << TB_NAME << bm.name;
-		strm << TB_DSC << bm.descr;
-		strm << TB_END;
+	foreach(id, idlist) {
+		bm = findBookmark(id);
+		if (bm) {
+			strm << TB_ID << bm->id;
+			strm << TB_NAME << bm->name;
+			strm << TB_DSC << bm->descr;
+			strm << TB_END;
+		}
 	}
 	strm << T7_END;
-
-	saveTree(strm, ui.tree->invisibleRootItem());
+// save tree from root
+	saveTree(strm, root);
 
 	buf.close();
 	data = qCompress(data);
 
-	if (path.isEmpty()) {
-		path = fdial.getSaveFileName(this,"Save book",prjPath,"Book files (*.trb)");
-		if (path.isEmpty()) {
-			return false;
-		}
-	}
+	if (path.isEmpty())
+		path = fdial.getSaveFileName(this,"Save book","","Book files (*.trb)");		// prjPath
+	if (path.isEmpty())
+		return false;
 	if (!path.endsWith(".trb",Qt::CaseInsensitive))
 		path.append(".trb");
 	QFile file(path);
@@ -1513,7 +1587,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsEditable); // | Qt::ItemIsUserCheckable);
 	if (id.isNull()) {
 		itm->setFlags(itm->flags() | Qt::ItemIsDropEnabled);
-		ico = findIcon(iconid);
+		ico = getIcon(iconid);
 		itm->setIcon(0, ico.isNull() ? QIcon(":/folder.png") : ico);
 		itm->setData(0, roleIcon, iconid.toByteArray());
 	} else {
