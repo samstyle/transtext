@@ -136,10 +136,26 @@ bool askSure(QString text) {
 
 void MWindow::clearTrn() {
 	if (!curPage) return;
-	if (!askSure("Clear translation?")) return;
-	for (int i = 0; i < curPage->text.size(); i++) {
-		curPage->text[i].trn.name.clear();
-		curPage->text[i].trn.text.clear();
+
+	QMessageBox box(QMessageBox::Question,"Question","Clear translation?",QMessageBox::YesToAll | QMessageBox::Yes | QMessageBox::No);
+	int res = box.exec();
+	if (res == QMessageBox::No) return;
+	if (res == QMessageBox::YesToAll) {
+		for (int i = 0; i < curPage->text.size(); i++) {
+			curPage->text[i].trn.name.clear();
+			curPage->text[i].trn.text.clear();
+		}
+		changed = 1;
+	} else if (res == QMessageBox::Yes) {
+		QModelIndexList lst = ui.table->selectionModel()->selectedRows();
+		QModelIndex idx;
+		int row;
+		foreach (idx, lst) {
+			row = idx.row();
+			curPage->text[row].trn.name.clear();
+			curPage->text[row].trn.text.clear();
+		}
+		changed = 1;
 	}
 	setProgress();
 	model->update();
@@ -369,9 +385,6 @@ void MWindow::findPrev() {
 void MWindow::keyPressEvent(QKeyEvent* ev) {
 	if (ev->modifiers() & Qt::ControlModifier) {
 		switch (ev->key()) {
-			case Qt::Key_Insert:
-				rowInsert(true);
-				break;
 			case Qt::Key_S:
 				savePrj(prjPath);
 				break;
@@ -396,15 +409,15 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				//curPage->text[curRow].flag ^= FL_BOOKMARK;
 				//model->updateCell(curRow, 0);
 				break;
-		}
-	} else {
-		switch (ev->key()) {
 			case Qt::Key_Delete:
 				rowDelete();
 				break;
 			case Qt::Key_Insert:
 				rowInsert(false);
 				break;
+		}
+	} else {
+		switch (ev->key()) {
 			case Qt::Key_Up:
 				if (ui.leFind->isVisible()) {
 					findPrev();
@@ -1305,8 +1318,14 @@ void savePage(QDataStream& strm, QUuid id) {
 	strm << T7_END;
 }
 
-void saveTree(QDataStream& strm, QTreeWidgetItem* root) {
+void saveTree(QDataStream& strm, QTreeWidgetItem* root, int saveroot = 0) {
 	strm << T7_TREE;
+	if (saveroot) {
+		strm << TT_DIR;
+		strm << TT_NAME << root->text(0);
+		strm << TT_ICONID << QUuid(root->data(0,roleIcon).toByteArray());
+		strm << TT_END;
+	}
 	saveLeaf7(strm, root);
 	strm << T7_END;
 }
@@ -1390,6 +1409,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 	QUuid id;
 	TIcon* ico;
 	TBookmark* bm;
+	int saveroot = root ? 1 : 0;
 
 	if (!root)
 		root = ui.tree->invisibleRootItem();
@@ -1433,7 +1453,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 	}
 	strm << T7_END;
 // save tree from root
-	saveTree(strm, root);
+	saveTree(strm, root, saveroot);
 
 	buf.close();
 	data = qCompress(data);
