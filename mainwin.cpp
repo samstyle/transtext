@@ -195,6 +195,8 @@ void MWindow::jumpLine(QAction *act) {
 }
 
 void MWindow::fillSJMenu() {
+	if (!curPage) return;
+
 	sjMenu->clear();
 	bmMenu->clear();
 
@@ -202,12 +204,16 @@ void MWindow::fillSJMenu() {
 	bmMenu->addAction(ui.actRmBookmark);
 	bmMenu->addSeparator();
 
-	if (!curPage) return;
 	QString txt;
 	TLine* line;
 	TBookmark* bm;
 	int i;
-	ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
+	if (curRow < 0) {
+		bmMenu->setEnabled(false);
+	} else {
+		bmMenu->setEnabled(true);
+		ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
+	}
 	for (i = 0; i < curPage->text.size(); i++) {
 		line = &curPage->text[i];
 
