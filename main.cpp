@@ -2,8 +2,8 @@
 
 #include "base.h"
 #include "mainwin.h"
+#include "replace.h"
 
-MWindow* win;
 QList<TPage> book;
 QList <TIcon> icons;
 QList <TBookmark> bookmarks;
@@ -370,6 +370,8 @@ void getCounts(TPage* page,int& trans, int& total) {
 		switch(getLineStatus(line)) {
 			case LS_TRN:
 				trans++;
+				total++;
+				break;
 			case LS_UNTRN:
 				total++;
 				break;
@@ -400,10 +402,15 @@ TPage* findPage(QUuid id) {
 int main(int ac,char** av) {
 	QApplication app(ac,av);
 
-	win = new MWindow;
-	win->show();
+	MWindow win;
+	Replacer rpl(&win);
 
-	if (ac > 1) win->openPrj(QString(av[1]));
+	app.connect(&win, &MWindow::rqReplace, &rpl, &Replacer::show);
+	app.connect(&rpl, &Replacer::confirm, &win, &MWindow::replace);
+
+	win.show();
+	if (ac > 1)
+		win.openPrj(QString(av[1]));
 
 	return app.exec();
 }

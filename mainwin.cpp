@@ -7,12 +7,12 @@
 #include "filetypes.h"
 
 QColor blkcol;
-TPage* curPage = NULL;
+TPage* curPage = nullptr;
 int changed = 0;
 
 MWindow::MWindow() {
-	curPage = NULL;
-	curItem = NULL;
+	curPage = nullptr;
+	curItem = nullptr;
 	prjPath.clear();
 	clip = QApplication::clipboard();
 
@@ -219,7 +219,7 @@ void MWindow::fillSJMenu() {
 
 		if (!line->bmrkId.isNull()) {
 			bm = findBookmark(line->bmrkId);
-			if (bm != NULL)
+			if (bm != nullptr)
 				bmMenu->addAction(bm->name)->setData(i);
 		}
 		if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
@@ -240,7 +240,7 @@ void MWindow::fillSJMenu() {
 
 void MWindow::appendCbrd() {
 	if (!ui.actGrabCbrd->isChecked()) return;
-	if (curPage == NULL) return;
+	if (curPage == nullptr) return;
 	QString txt = clip->text();
 	TLine tlin;
 	tlin.type = TL_TEXT;
@@ -319,6 +319,31 @@ int MWindow::getCurrentRow() {
 }
 
 // search
+
+void MWindow::replace(QString fstr, QString rstr) {
+	if (!curPage) return;
+	if (fstr.isEmpty()) return;
+	for (int i = 0; i < curPage->text.size(); i++) {
+		if (curPage->text[i].src.name.contains(fstr)) {
+			curPage->text[i].src.name.replace(fstr, rstr);
+			changed = 1;
+		}
+		if (curPage->text[i].src.text.contains(fstr)) {
+			curPage->text[i].src.text.replace(fstr, rstr);
+			changed = 1;
+		}
+		if (curPage->text[i].trn.name.contains(fstr)) {
+			curPage->text[i].trn.name.replace(fstr, rstr);
+			changed = 1;
+		}
+		if (curPage->text[i].trn.text.contains(fstr)) {
+			curPage->text[i].trn.text.replace(fstr, rstr);
+			changed = 1;
+		}
+		model->updateLine(i);
+	}
+	changeRow(QItemSelection());
+}
 
 void MWindow::findStr(QString str) {
 	ui.leFind->setStyleSheet("");
@@ -406,6 +431,9 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.widFind->hide();
 				}
 				break;
+			case Qt::Key_R:
+				emit rqReplace();
+				break;
 			case Qt::Key_D:
 				if (ui.srcname->isVisible()) break;
 				splitName();
@@ -443,6 +471,9 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.widFind->hide();
 					ui.table->setFocus();
 				}
+				break;
+			case Qt::Key_Insert:
+				rowInsert(false);
 				break;
 		}
 	}
@@ -546,7 +577,7 @@ void MWindow::changeIcon() {
 }
 
 void MWindow::loadIcon() {
-	QStringList paths = fdial.getOpenFileNames(icowin, "Select icon(s)");
+	QStringList paths = fdial.getOpenFileNames(icowin, "Select icon(s)","","",nullptr,QFileDialog::DontUseNativeDialog);
 	if (paths.isEmpty()) return;
 	QString path;
 	TIcon ico;
@@ -705,7 +736,7 @@ void MWindow::delItem(QTreeWidgetItem* item) {
 		removePage(id);
 	}
 	QTreeWidgetItem* par = item->parent();
-	if (par == NULL) par = ui.tree->invisibleRootItem();
+	if (par == nullptr) par = ui.tree->invisibleRootItem();
 	if (par->indexOfChild(item) >= 0)
 		par->removeChild(item);
 	changed = 1;
@@ -714,7 +745,7 @@ void MWindow::delItem(QTreeWidgetItem* item) {
 // pix
 
 void MWindow::pageSplit() {
-	if (curItem == NULL) return;
+	if (curItem == nullptr) return;
 	int idx = getCurrentRow();
 	if (idx < 0) return;
 	if (idx >= ui.table->model()->rowCount()) return;
@@ -810,7 +841,7 @@ void MWindow::setEdit(bool on) {
 }
 
 void MWindow::disableTab() {
-	curPage = NULL;
+	curPage = nullptr;
 	curRow = -1;
 	ui.tabs->setEnabled(false);
 	setEdit(false);
@@ -820,7 +851,7 @@ void MWindow::disableTab() {
 void MWindow::changePage() {
 	if (curPage) {
 		curPage->curRow = ui.table->currentIndex().row();
-		curPage = NULL;
+		curPage = nullptr;
 	}
 	if (ui.tree->selectedItems().size() != 1) {
 		disableTab();
@@ -862,6 +893,7 @@ void MWindow::changeRow(QItemSelection) {
 	QString text;
 	if (row < 0) {
 		setEdit(false);
+		ui.labInfo->setText("");
 	} else {
 		if ((curPage->text[row].type == TL_TEXT) || (curPage->text[row].type == TL_SELECT)) {
 			ui.srcname->setText(curPage->text[row].src.name);
@@ -885,8 +917,10 @@ void MWindow::changeRow(QItemSelection) {
 				text.prepend(QDialog::trUtf8("「")).prepend(ui.srcname->text()).append(QDialog::trUtf8("」"));
 			}
 			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
+			ui.labInfo->setText(QString("%0 / %1").arg(curRow).arg(curPage->text.size()));
 		} else {
 			setEdit(false);
+			ui.labInfo->setText("");
 		}
 	}
 }
@@ -917,7 +951,7 @@ void MWindow::changeSNm(QString text) {
 	if (curPage->text[curRow].src.name == text) return;
 	curPage->text[curRow].src.name = text;
 	model->updateCell(curRow,1);
-	setProgress();
+	// setProgress();
 	changed = 1;
 }
 
@@ -925,9 +959,17 @@ void MWindow::changeTNm(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
 	if (curPage->text[curRow].trn.name == text) return;
-	curPage->text[curRow].trn.name = text;
-	model->updateCell(curRow,3);
-	setProgress();
+	// curPage->text[curRow].trn.name = text;
+	// model->updateCell(curRow,3);
+
+	QString srcNm = curPage->text[curRow].src.name;
+	for (int i = 0; i < curPage->text.size(); i++) {
+		if ((curPage->text[i].src.name == srcNm) && (curPage->text[i].trn.name != text)) {
+			curPage->text[i].trn.name = text;
+			model->updateCell(i, 3);
+		}
+	}
+	// setProgress();
 	changed = 1;
 }
 
@@ -1197,7 +1239,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 							break;
 						case TT_END:
 							par = par->parent();
-							if (par == NULL) par = ui.tree->invisibleRootItem();
+							if (par == nullptr) par = ui.tree->invisibleRootItem();
 							break;
 						default:
 							idError(T7_TREE, type);
@@ -1242,7 +1284,7 @@ QByteArray loadPrjData(QString path) {
 
 void MWindow::openPrj(QString path) {
 	if (!saveChanged()) return;
-	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)");
+	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
@@ -1263,7 +1305,7 @@ void MWindow::openPrj(QString path) {
 }
 
 void MWindow::mergePrj(QString path) {
-	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)");
+	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
@@ -1458,6 +1500,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 		}
 	}
 	strm << T7_END;
+
 // save tree from root
 	saveTree(strm, root, saveroot);
 
@@ -1481,7 +1524,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 }
 
 void MWindow::saveSrc() {
-	if (curPage == NULL) return;
+	if (curPage == nullptr) return;
 	QString path = fdial.getSaveFileName(this,"Save src text","","All files (*)");
 	if (path == "") return;
 	QFile file(path);
@@ -1509,7 +1552,8 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	filters << "Text files (*)"
 		<< "EAGLS script(*.txt)"
 		<< "KS files (*.ks)"
-		<< "KS files Unicode (*.ks)"
+		<< "KS files UCS2 (*.ks)"
+		<< "KS files UTF8 (*.ks)"
 		<< "Abelsoft script ADV (*.adv)"
 		<< "Enmon script ENM (*.enm)"
 		<< "SNX engine (*.snx)";
@@ -1523,8 +1567,9 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	qDebug() << path;
 	TPage page;
 	int cpage = CP_SJIS;
-	if (path.contains("Unicode")) cpage = CP_UNICODE;
-	TPage(*callback)(QString,int) = NULL;
+	if (path.contains("UCS2")) cpage = CP_UCS2;
+	if (path.contains("UTF8")) cpage = CP_UTF8;
+	TPage(*callback)(QString,int) = nullptr;
 	if (path.contains("Abelsoft")) callback = &loadAbelsoft;
 	if (path.contains("Enmon")) callback = &loadEnmon;
 	if (path.contains("KS files")) callback = &loadKS;
@@ -1575,7 +1620,7 @@ void MWindow::openSrc() {
 
 QTreeWidgetItem* MWindow::getCurrentParent() {
 	QModelIndexList rws = ui.tree->selectionModel()->selectedRows(0);
-	QTreeWidgetItem* par = (rws.size() == 1) ? ui.tree->currentItem() : NULL;
+	QTreeWidgetItem* par = (rws.size() == 1) ? ui.tree->currentItem() : nullptr;
 	QUuid id;
 	if (par) {
 		id = QUuid(par->data(0,Qt::UserRole).toByteArray());
@@ -1624,7 +1669,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 			itm->setIcon(0,getIcon(page));
 		}
 	}
-	if (par == NULL) par = ui.tree->invisibleRootItem();
+	if (par == nullptr) par = ui.tree->invisibleRootItem();
 	int idx = par->indexOfChild(curItem);
 	if (idx < 0) {
 		par->addChild(itm);

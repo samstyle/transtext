@@ -34,8 +34,8 @@ TPage loadSNX(QString fname, int cpage) {
 	long dataPos = count * 12 + 8;
 	long curPos = 0;
 //	long adr = 0;
-	char buf[1024];
-	char cbuf[1024];
+	char buf[2000];
+	char cbuf[2010];
 	char* sptr;
 	char* dptr;
 

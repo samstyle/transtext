@@ -1,5 +1,5 @@
-#ifndef _MWINDOW_H
-#define _MWINDOW_H
+#ifndef X_MWINDOW_H
+#define X_MWINDOW_H
 
 #include <QtGui>
 #include <QFileDialog>
@@ -12,7 +12,7 @@ extern TPage* curPage;
 
 enum {
 	roleId = Qt::UserRole,
-	roleIcon
+	roleIcon,
 };
 
 class TBModel : public QAbstractTableModel {
@@ -36,6 +36,9 @@ class MWindow : public QMainWindow {
 		MWindow();
 	public slots:
 		void openPrj(QString path = "");
+		void replace(QString, QString);
+	signals:
+		void rqReplace();
 	private:
 		Ui::MainWin ui;
 		Ui::IconWin icoui;

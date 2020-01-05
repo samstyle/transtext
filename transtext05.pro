@@ -6,16 +6,19 @@ TEMPLATE = app
 TARGET = transtext05
 DEPENDPATH += .
 INCLUDEPATH += .
-QT += widgets
+QT += core gui widgets
 
 # Input
-HEADERS += base.h mainwin.h filetypes.h
+HEADERS += base.h mainwin.h filetypes.h \
+    replace.h
 FORMS += mainwin.ui \
     iconwindow.ui \
-    bookmark.ui
+    bookmark.ui \
+    replacedialog.ui
 SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp \
     enm.cpp \
-    eagls.cpp
+    eagls.cpp \
+    replace.cpp
 RESOURCES += resources.qrc
 
 DISTFILES +=

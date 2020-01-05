@@ -81,9 +81,13 @@ TPage loadKS(QString fnam, int cpage) {
 	ParLine param;
 	QTextCodec* codec;
 	switch (cpage) {
-		case CP_UNICODE:
-			file.read(3);		// skip BOM
+		case CP_UCS2:
+			file.read(2);		// skip BOM (FF FE)
 			codec = QTextCodec::codecForName("UCS-2");
+			break;
+		case CP_UTF8:
+			file.read(3);		// skip BOM
+			codec = QTextCodec::codecForName("UTF8");
 			break;
 		default:
 			codec = QTextCodec::codecForName("Shift-JIS");
@@ -210,6 +214,8 @@ TPage loadKS(QString fnam, int cpage) {
 						page.text.append(elin);
 						nlin.src.text = QString("[JUMP %0]").arg(getAttribute(param,"src"));
 						page.text.append(nlin);
+					} else if (param.com == "mruby") {
+						tlin.src.text.append(getAttribute(param, "text"));
 					}
 				}
 			} else if (line.startsWith("@")) {

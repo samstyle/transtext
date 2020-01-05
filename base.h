@@ -6,7 +6,8 @@
 
 enum {
 	CP_SJIS = 0,
-	CP_UNICODE
+	CP_UCS2,
+	CP_UTF8
 };
 
 enum {
