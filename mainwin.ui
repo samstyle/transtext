@@ -23,14 +23,11 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QTreeWidget" name="tree">
-        <property name="maximumSize">
-         <size>
-          <width>200</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="contextMenuPolicy">
          <enum>Qt::CustomContextMenu</enum>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
         </property>
         <property name="dragDropMode">
          <enum>QAbstractItemView::InternalMove</enum>

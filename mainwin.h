@@ -95,6 +95,8 @@ class MWindow : public QMainWindow {
 		void changeSNm(QString);
 		void changeTNm(QString);
 
+		void pageInfo();
+
 		void saveBranch();
 
 		void newDir();

@@ -63,6 +63,8 @@ MWindow::MWindow() {
 	connect(ui.leFind,SIGNAL(returnPressed()),this,SLOT(findNext()));
 
 	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
+	connect(ui.tree, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(pageInfo()));
+
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
@@ -742,7 +744,12 @@ void MWindow::delItem(QTreeWidgetItem* item) {
 	changed = 1;
 }
 
-// pix
+void MWindow::pageInfo() {
+	if (curItem == nullptr) return;		// never?
+	if (curPage == nullptr) return;
+	if (curPage->id.isNull()) return;	// dir
+	qDebug() << 1;
+}
 
 void MWindow::pageSplit() {
 	if (curItem == nullptr) return;
@@ -757,6 +764,8 @@ void MWindow::pageSplit() {
 	model->update();
 	setProgress();
 }
+
+// pix
 
 // rows actions
 
