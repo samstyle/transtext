@@ -10,15 +10,19 @@ QT += core gui widgets
 
 # Input
 HEADERS += base.h mainwin.h filetypes.h \
+    models.h \
     replace.h
 FORMS += mainwin.ui \
+    bookmarks.ui \
     iconwindow.ui \
     bookmark.ui \
     replacedialog.ui
 SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp \
+    bmlmodel.cpp \
     enm.cpp \
     eagls.cpp \
-    replace.cpp
+    replace.cpp \
+    trb.cpp
 RESOURCES += resources.qrc
 
 DISTFILES +=

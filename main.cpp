@@ -76,6 +76,7 @@ QStringList splitLine(QString text, QString div) {
 
 void normLine(TLine& line) {
 	QStringList pair;
+	int pos;
 	line.src.name.remove(QObject::trUtf8("　"));
 	line.src.text.remove(QObject::trUtf8("　"));
 	pair.clear();
@@ -88,6 +89,14 @@ void normLine(TLine& line) {
 			line.src.text = pair.last();
 			line.src.text.remove(QObject::trUtf8("「"));
 			line.src.text.remove(QObject::trUtf8("」"));
+		}
+		if (line.src.text.endsWith(QObject::trUtf8("）"))) {
+			pos = line.src.text.indexOf(QObject::trUtf8("（"));
+			if ((pos > 0) && (pos < 10)) {
+				pair = splitLine(line.src.text,QObject::trUtf8("（"));
+				line.src.name = pair.first();
+				line.src.text = pair.last().prepend(QObject::trUtf8("（"));
+			}
 		}
 		if (line.src.text.indexOf(QObject::trUtf8("\t")) != -1) {
 			pair = splitLine(line.src.text,QObject::trUtf8("\t"));
@@ -136,6 +145,22 @@ QIcon getIcon(QUuid id) {
 	return ico;
 }
 
+QIcon getPageIcon(TPage* page) {
+	QPixmap pix(32,32);
+	QPainter pnt;
+	int prc = getProgress(page);
+	pnt.begin(&pix);
+	int high = 0.30 * prc;
+	pnt.fillRect(0,0,32,32,Qt::lightGray);
+	pnt.fillRect(0,0,32,8,Qt::red);
+	pnt.fillRect(1,1,high,6,Qt::green);
+	pnt.setFont(QFont("FreeSans",14,QFont::Bold));
+	pnt.setPen(Qt::black);
+	pnt.drawText(QRect(1,8,30,24),Qt::AlignCenter,QString::number(prc));
+	pnt.end();
+	return QIcon(pix);
+}
+
 int addIcon(TIcon ico) {
 	int res = 1;
 	if (ico.id.isNull()) {
@@ -173,13 +198,19 @@ QUuid addBookmark(TBookmark bm) {
 	if (bm.id.isNull()) {			// new bookmark
 		bm.id = QUuid::createUuid();
 		bookmarks.append(bm);
+		qDebug() << "new bm " << bm.id;
 	} else {				// find if exists
 		tb = findBookmark(bm.id);
 		if (!tb) {
+			qDebug() << "new bm(2) " << bm.id;
 			bookmarks.append(bm);		// not found
 		} else {
 			tb->name = bm.name;		// found: update existing bookmark
 			tb->descr = bm.descr;
+			if (tb->pgid.isNull()) {
+				tb->pgid = bm.pgid;
+				tb->row = bm.row;
+			}
 		}
 	}
 	return bm.id;

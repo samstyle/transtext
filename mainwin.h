@@ -1,12 +1,15 @@
-#ifndef X_MWINDOW_H
-#define X_MWINDOW_H
+#pragma once
 
 #include <QtGui>
 #include <QFileDialog>
-#include "base.h"
+
 #include "ui_mainwin.h"
 #include "ui_iconwindow.h"
 #include "ui_bookmark.h"
+#include "ui_bookmarks.h"
+
+#include "models.h"
+#include "base.h"
 
 extern TPage* curPage;
 
@@ -15,19 +18,33 @@ enum {
 	roleIcon,
 };
 
-class TBModel : public QAbstractTableModel {
+class TRBLoader {
 	public:
-		TBModel(QObject* p = NULL);
-		int rowCount(const QModelIndex& idx = QModelIndex()) const;
-		int columnCount(const QModelIndex& idx = QModelIndex()) const;
-		QVariant data(const QModelIndex&, int role = Qt::DisplayRole) const;
-		QVariant headerData(int,Qt::Orientation, int role = Qt::DisplayRole) const;
-		void update();
-		void updateLine(int);
-		void updateCell(int,int);
-		void insertRow(int, const QModelIndex& idx = QModelIndex());
-		void removeRow(int, const QModelIndex& idx = QModelIndex());
-		QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
+		TRBLoader() {}
+		int load(QString, QTreeWidgetItem*);
+		int save(QString, QTreeWidgetItem*);
+	private:
+		QBuffer buf;
+		QDataStream strm;
+
+		QList<int> getlist();
+		QTreeWidgetItem* add_item(QTreeWidgetItem*, QString, QUuid, QUuid=0);
+
+		void v7_load(QTreeWidgetItem*);
+		int v7_load_icons();
+		int v7_load_bookmarks();
+		int v7_load_page();
+		int v7_load_tree(QTreeWidgetItem*);
+
+		int v7_save(QTreeWidgetItem*);
+		void v7_save_page(QUuid);
+		void v7_save_tree(QTreeWidgetItem*);
+
+		void v8_load(QTreeWidgetItem*);
+		void v8_load_icons();
+		void v8_load_bookmarks();
+		void v8_load_pages();
+		void v8_load_tree(QTreeWidgetItem*);
 };
 
 class MWindow : public QMainWindow {
@@ -43,10 +60,14 @@ class MWindow : public QMainWindow {
 		Ui::MainWin ui;
 		Ui::IconWin icoui;
 		Ui::AddBookmark bmui;
+		Ui::Bookmarks blui;
 
 		QDialog* icowin;
 		QDialog* bmwin;
 		QFileDialog fdial;
+
+		QDialog* blwin;
+		BMLModel* blmod;
 
 		int curRow;
 		QTreeWidgetItem* curItem;
@@ -76,7 +97,10 @@ class MWindow : public QMainWindow {
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 
+		TRBLoader trb;
+
 		void loadVer78(QByteArray&, QTreeWidgetItem*);
+//		void loadVer8(QByteArray&, QTreeWidgetItem*);
 	private slots:
 		void treeContextMenu();
 		void tbContextMenu();
@@ -96,6 +120,7 @@ class MWindow : public QMainWindow {
 		void changeTNm(QString);
 
 		void pageInfo();
+		void bmList();
 
 		void saveBranch();
 
@@ -138,5 +163,3 @@ class MWindow : public QMainWindow {
 		void keyPressEvent(QKeyEvent*);
 		void closeEvent(QCloseEvent*);
 };
-
-#endif // WINDOW_H

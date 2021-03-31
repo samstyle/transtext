@@ -6,6 +6,8 @@
 #include "mainwin.h"
 #include "filetypes.h"
 
+#define NEW_LOADER 1
+
 QColor blkcol;
 TPage* curPage = nullptr;
 int changed = 0;
@@ -128,6 +130,11 @@ MWindow::MWindow() {
 	bmui.setupUi(bmwin);
 	connect(bmui.pbAdd, SIGNAL(released()), this, SLOT(newBookmark()));
 
+	blwin = new QDialog(this);
+	blui.setupUi(blwin);
+	blmod = new BMLModel();
+	blui.table->setModel(blmod);
+	connect(ui.actBookmarks, SIGNAL(triggered()), blwin, SLOT(show()));
 }
 
 bool askSure(QString text) {
@@ -144,7 +151,7 @@ void MWindow::clearTrn() {
 	if (res == QMessageBox::No) return;
 	if (res == QMessageBox::YesToAll) {
 		for (int i = 0; i < curPage->text.size(); i++) {
-			curPage->text[i].trn.name.clear();
+			//curPage->text[i].trn.name.clear();
 			curPage->text[i].trn.text.clear();
 		}
 		changed = 1;
@@ -154,7 +161,7 @@ void MWindow::clearTrn() {
 		int row;
 		foreach (idx, lst) {
 			row = idx.row();
-			curPage->text[row].trn.name.clear();
+			//curPage->text[row].trn.name.clear();
 			curPage->text[row].trn.text.clear();
 		}
 		changed = 1;
@@ -165,8 +172,17 @@ void MWindow::clearTrn() {
 
 void MWindow::findUntrn() {
 	if (!curPage) return;
-	for (int i = 0; i < curPage->text.size(); i++) {
-		if (getLineStatus(curPage->text.at(i)) == LS_UNTRN) {
+	int start, state, nst;
+	if (curRow < 0) {
+		start = -1;
+		state = LS_NONE;
+	} else {
+		start = curRow;
+		state = getLineStatus(curPage->text.at(curRow));
+	}
+	for (int i = start + 1; i < curPage->text.size(); i++) {
+		nst = getLineStatus(curPage->text.at(i));
+		if (((nst == LS_TRN) || (nst == LS_UNTRN)) && (nst != state)) {
 			ui.table->selectRow(i);
 			break;
 		}
@@ -262,22 +278,6 @@ void MWindow::setPage(QUuid id) {
 	model->update();
 }
 
-QIcon getIcon(TPage* page) {
-	QPixmap pix(32,32);
-	QPainter pnt;
-	int prc = getProgress(page);
-	pnt.begin(&pix);
-	int high = 0.30 * prc;
-	pnt.fillRect(0,0,32,32,Qt::lightGray);
-	pnt.fillRect(0,0,32,8,Qt::red);
-	pnt.fillRect(1,1,high,6,Qt::green);
-	pnt.setFont(QFont("FreeSans",14,QFont::Bold));
-	pnt.setPen(Qt::black);
-	pnt.drawText(QRect(1,8,30,24),Qt::AlignCenter,QString::number(prc));
-	pnt.end();
-	return QIcon(pix);
-}
-
 void MWindow::setProgress() {
 	if (!curItem || !curPage) {
 		ui.progress->setMaximum(1);
@@ -289,7 +289,7 @@ void MWindow::setProgress() {
 			tot = 1;
 		} else {
 			getCounts(curPage,trn,tot);
-			curItem->setIcon(0,getIcon(curPage));
+			curItem->setIcon(0,getPageIcon(curPage));
 		}
 		ui.progress->setMaximum(tot);
 		ui.progress->setValue(trn);
@@ -663,6 +663,8 @@ void MWindow::newBookmark() {
 	bm.id = QUuid();
 	bm.name = bmui.lename->text();
 	bm.descr = bmui.tedescr->toPlainText();
+	bm.pgid = curPage->id;
+	bm.row = curPage->curRow;
 	if (bm.name.isEmpty()) return;
 	bmwin->close();
 	curPage->text[curRow].bmrkId = addBookmark(bm);
@@ -679,6 +681,10 @@ void MWindow::askRmBookmark() {
 	curPage->text[curRow].bmrkId = QUuid(0);
 	model->updateCell(curRow, 0);
 	changed = 1;
+}
+
+void MWindow::bmList() {
+	blwin->show();
 }
 
 // page
@@ -748,7 +754,6 @@ void MWindow::pageInfo() {
 	if (curItem == nullptr) return;		// never?
 	if (curPage == nullptr) return;
 	if (curPage->id.isNull()) return;	// dir
-	qDebug() << 1;
 }
 
 void MWindow::pageSplit() {
@@ -814,7 +819,7 @@ void MWindow::joinLine() {
 	TLine tlin = curPage->text[curRow];
 	TLine nlin = curPage->text[curRow + 1];
 	tlin.src.text.append(nlin.src.text);
-	tlin.trn.text.append(nlin.src.text);
+	tlin.trn.text.append(nlin.trn.text);
 	curPage->text[curRow] = tlin;
 	curPage->text.removeAt(curRow + 1);
 	model->update();
@@ -993,53 +998,7 @@ void MWindow::newPrj() {
 
 // load-save
 
-#define TPART	1
-#define TPAGE	2
-#define TNOTE	3
-#define TPIXX	4
-#define TEND	-1
-
-#define	TBOOK	10
-#define TTREE	11
-
-#define T7_PAGE	0x3F		// pages
-#define	T7_TREE	0x3E		// book tree
-#define T7_ICON	0x3D		// icons
-#define T7_BMRK	0x3C		// bookmarks
-#define T7_END	0x00
-
-#define TI_ID	0x40		// uuid
-#define TI_NAME	0x80		// name
-#define TI_ICO	0xc0		// icon
-#define TI_END	0x01
-
-#define TB_ID	0x40		// id
-#define	TB_NAME	0x41		// name
-#define TB_DSC	0x42		// description
-#define TB_END	0x01
-
-#define TP_ID	0x41		// page id (old)
-#define	TP_FLAG	0x42		// page flag
-#define TP_UUID	0x43		// page uuid
-
-#define	TP_LINE	0x03
-#define	TL_SN	0x84		// src name
-#define	TL_ST	0x85		// src text
-#define	TL_TN	0x86		// trn name
-#define	TL_TT	0x87		// trn text
-#define TL_BMID	0x88		// bookmark id
-#define	TL_TYPE	TP_ID
-#define	TL_FLAG	TP_FLAG
-
-#define	TT_DIR	0x08
-#define	TT_PAGE	0x09
-#define	TT_NAME	0x8A		// name of (dir/page)
-#define TT_ICON 0xCC		// icon (old)
-#define TT_ICONID 0x4a		// icon uuid
-#define	TT_PID	0x4B		// assotiated page id (int)
-#define	TT_UUID	0x4C		// ...or uuid
-#define	TT_END	0x0D		// end of current dir list
-
+/*
 void idError(int type, int subtype) {
 	QMessageBox msg(QMessageBox::Critical, QString("Error"), QString(), QMessageBox::Ok);
 	switch(type) {
@@ -1067,7 +1026,10 @@ void idError(int type, int subtype) {
 	}
 	msg.exec();
 }
+*/
 
+#if !NEW_LOADER
+void idError(int type, int subtype);
 void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 	QUuid id;
 	QUuid iconid;
@@ -1173,6 +1135,7 @@ void MWindow::loadVer78(QByteArray& data, QTreeWidgetItem* par) {
 							}
 							if (err) break;
 							lin.src.text.remove(QObject::trUtf8("　"));
+							normLine(lin);
 							page.text.append(lin);
 							break;
 						default:
@@ -1290,41 +1253,64 @@ QByteArray loadPrjData(QString path) {
 	}
 	return arr;
 }
+#endif
 
 void MWindow::openPrj(QString path) {
 	if (!saveChanged()) return;
 	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
+#if NEW_LOADER
+	prjInit();
+	if (trb.load(path, ui.tree->invisibleRootItem())) {
+		prjPath = path;
+		changed = 0;
+	}
+#else
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
 		prjPath = path;
-		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
-		qDebug()<<"ver "<<ver;
 		ui.tree->clear();
 		book.clear();
 		icons.clear();
 		bookmarks.clear();
 		QTreeWidgetItem* par = ui.tree->invisibleRootItem();
-		if (ver == 7) {
+		if (data.left(4) == "TRB7") {
 			prjInit();
 			loadVer78(data, par);
 			changed = 0;
+//		} else if (data.left(4) == "TRB8") {
+//			prjInit();
+//			loadVer8(data, par);
+//			changed = 0;
+		} else {
+			prjPath.clear();
+			QMessageBox::critical(this, "Error", "TRB version mismatch");
 		}
 	}
+#endif
 }
 
 void MWindow::mergePrj(QString path) {
 	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
+#if NEW_LOADER
+	trb.load(path, getCurrentParent());
+	changed = 1;
+#else
 	QByteArray data = loadPrjData(path);
 	if (!data.isEmpty()) {
 		QTreeWidgetItem* par = getCurrentParent();
-		int ver = QDialog::trUtf8(data.mid(3,1)).toInt();
-		if (ver == 7) {
+		if (data.left(4) == "TRB7") {
 			loadVer78(data, par);
 			changed = 1;
+//		} else if (data.left(4) == "TRB8") {
+//			loadVer8(data, par);
+//			changed = 1;
+		} else {
+			QMessageBox::critical(this, "Error", "TRB version mismatch");
 		}
 	}
+#endif
 }
 
 void MWindow::saveIt() {
@@ -1517,7 +1503,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 	data = qCompress(data);
 
 	if (path.isEmpty())
-		path = fdial.getSaveFileName(this,"Save book","","Book files (*.trb)");		// prjPath
+		path = fdial.getSaveFileName(this,"Save book","","Book files (*.trb)", nullptr, QFileDialog::DontUseNativeDialog);		// prjPath
 	if (path.isEmpty())
 		return false;
 	if (!path.endsWith(".trb",Qt::CaseInsensitive))
@@ -1573,7 +1559,6 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 		return res;
 	QStringList paths = qfd.selectedFiles();
 	QString path = qfd.selectedNameFilter();
-	qDebug() << path;
 	TPage page;
 	int cpage = CP_SJIS;
 	if (path.contains("UCS2")) cpage = CP_UCS2;
@@ -1675,7 +1660,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 		if (page) {
 			tip = QString("id : %0").arg(page->id.toString());
 			itm->setToolTip(0,tip);
-			itm->setIcon(0,getIcon(page));
+			itm->setIcon(0, getPageIcon(page));
 		}
 	}
 	if (par == nullptr) par = ui.tree->invisibleRootItem();

@@ -78,8 +78,10 @@ TPage loadKS(QString fnam, int cpage) {
 	int pos;
 	QString line;
 	QString comline;
+	QString str;
 	ParLine param;
 	QTextCodec* codec;
+	int name = 0;
 	switch (cpage) {
 		case CP_UCS2:
 			file.read(2);		// skip BOM (FF FE)
@@ -131,10 +133,15 @@ TPage loadKS(QString fnam, int cpage) {
 						page.text.append(elin);
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"haikei"));
 						page.text.append(nlin);
-					} else if ((param.com == "haikei") || (param.com == "bg") || (param.com == "ev")) {
-						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
-						page.text.append(elin);
-						page.text.append(nlin);
+					} else if ((param.com == "haikei") || (param.com == "bg") || (param.com == "ev") || (param.com == "evcg")) {
+						str =getAttribute(param, "file");
+						if (str.isEmpty())
+							str = getAttribute(param, "storage");
+						if (!str.isEmpty()) {
+							nlin.src.text = QString("[BG:%0]").arg(str);
+							page.text.append(elin);
+							page.text.append(nlin);
+						}
 					} else if (param.com == QDialog::trUtf8("背景")) {
 						nlin.src.text = QString("[BG:%0]").arg(getAttribute(param,"file"));
 						page.text.append(elin);
@@ -199,7 +206,10 @@ TPage loadKS(QString fnam, int cpage) {
 						line.prepend(QDialog::trUtf8("（"));
 					} else if (param.com.startsWith("m") && !param.com.startsWith("mw") && (param.pars.size() == 0)) {
 						tlin.src.name = param.com.mid(1);
-					} else if (param.com == "r") {
+					} else if (param.com == "ns") {
+						name = 1;
+					} else if ((param.com == "r") || (param.com == "nse")) {
+						if (param.com == "nse") name = 0;
 						line.append(codec->toUnicode(file.readLine()));
 						line.remove("\r");
 						line.remove("\n");
@@ -287,13 +297,19 @@ TPage loadKS(QString fnam, int cpage) {
 					comline = line.left(pos);
 					line = line.mid(pos);
 				}
-				tlin.src.text.append(comline);
+				if (name) {
+					tlin.src.name.append(comline);
+				} else {
+					tlin.src.text.append(comline);
+				}
 			}
 		}
 		if (!tlin.src.text.isEmpty()) {
 			if (tlin.src.text.startsWith(QDialog::trUtf8("「")) && tlin.src.text.endsWith(QDialog::trUtf8("」"))) {
 				tlin.src.text = tlin.src.text.mid(1, tlin.src.text.size() - 2);
 			}
+			tlin.src.name.remove("【");
+			tlin.src.name.remove("】");
 			page.text.append(tlin);
 			tlin.src.name.clear();
 		}

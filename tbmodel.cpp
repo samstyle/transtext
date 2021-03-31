@@ -68,8 +68,8 @@ QVariant TBModel::headerData(int sect,Qt::Orientation orien, int role) const {
 		switch (sect) {
 			case 1: res = "Name"; break;
 			case 2: res = "Text"; break;
-			case 3: res = trUtf8("Имя"); break;
-			case 4: res = trUtf8("Текст"); break;
+			case 3: res = "Имя"; break;
+			case 4: res = "Текст"; break;
 		}
 	}
 	return res;
