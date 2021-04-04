@@ -103,6 +103,7 @@ class MWindow : public QMainWindow {
 
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
+		int selectItemByPageID(QUuid);
 
 		TRBLoader trb;
 
@@ -128,6 +129,7 @@ class MWindow : public QMainWindow {
 
 		void pageInfo();
 		void bmList();
+		void goToBookmark(const QModelIndex&);
 
 		void saveBranch();
 

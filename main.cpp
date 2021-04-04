@@ -184,6 +184,10 @@ void rmIcon(QUuid id) {
 
 // bookmarks
 
+QList<TBookmark>* get_bmlist_ptr() {
+	return &bookmarks;
+}
+
 TBookmark* findBookmark(QUuid id) {
 	TBookmark* res = NULL;
 	for (int i = 0; i < bookmarks.size(); i++) {

@@ -141,6 +141,7 @@ extern QList<TIcon> icons;
 TBookmark* findBookmark(QUuid);
 QUuid addBookmark(TBookmark);
 void rmBookmark(QUuid);
+QList<TBookmark>* get_bmlist_ptr();
 
 extern QList<TBookmark> bookmarks;
 

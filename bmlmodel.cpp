@@ -19,6 +19,7 @@ QVariant BMLModel::data(const QModelIndex& idx, int role) const {
 	if ((row < 0) || (col < 0)) return res;
 	if (row >= rowCount()) return res;
 	if (col >= columnCount()) return res;
+	if (row >= bookmarks.size()) return res;
 	TBookmark bm = bookmarks.at(row);
 	TPage* pg = findPage(bm.pgid);
 	switch (role) {
@@ -28,13 +29,22 @@ QVariant BMLModel::data(const QModelIndex& idx, int role) const {
 					res = bm.name;
 					break;
 				case 1:
-					if (pg) res = pg->name;
+					if (pg) res = QString("%0:%1").arg(bm.id.toString()).arg(bm.row);
 					break;
 				case 2:
-					res = bm.row;
+					res = bm.descr;
 					break;
 			}
 			break;
 	}
 	return res;
+}
+
+QModelIndex BMLModel::index(int row, int column, const QModelIndex&) const {
+	QModelIndex res = createIndex(row, column, (void*)this);
+	return res;
+}
+
+void BMLModel::update() {
+	endResetModel();
 }

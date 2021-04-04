@@ -133,9 +133,10 @@ MWindow::MWindow() {
 
 	blwin = new QDialog(this);
 	blui.setupUi(blwin);
-	blmod = new BMLModel();
+	blmod = new BMLModel;
 	blui.table->setModel(blmod);
-	connect(ui.actBookmarks, SIGNAL(triggered()), blwin, SLOT(show()));
+	connect(ui.actBookmarks, SIGNAL(triggered()), this, SLOT(bmList()));
+	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
 }
 
 bool askSure(QString text) {
@@ -443,8 +444,9 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				break;
 			case Qt::Key_Z:
 				askBookmark();
-				//curPage->text[curRow].flag ^= FL_BOOKMARK;
-				//model->updateCell(curRow, 0);
+				break;
+			case Qt::Key_B:
+				bmList();
 				break;
 			case Qt::Key_Delete:
 				rowDelete();
@@ -685,7 +687,48 @@ void MWindow::askRmBookmark() {
 }
 
 void MWindow::bmList() {
+	blmod->update();
 	blwin->show();
+}
+
+QTreeWidgetItem* searchItem(QTreeWidgetItem* par, QUuid id) {
+	QTreeWidgetItem* res = nullptr;
+	QTreeWidgetItem* itm;
+	QUuid uid;
+	int i;
+	for (i = 0; (i < par->childCount()) && (res == nullptr); i++) {
+		itm = par->child(i);
+		uid = itm->data(0, roleId).toUuid();
+		if (uid.isNull()) {
+			res = searchItem(itm, id);
+		} else if (itm->data(0, roleId).toUuid() == id) {
+			res = itm;
+		}
+	}
+	return res;
+}
+
+int MWindow::selectItemByPageID(QUuid id) {
+	QTreeWidgetItem* itm = searchItem(ui.tree->invisibleRootItem(), id);
+	int res = 0;
+	if (itm != nullptr) {
+		ui.tree->setCurrentItem(itm);
+		res = 1;
+	}
+	return res;
+}
+
+void MWindow::goToBookmark(const QModelIndex& idx) {
+	int row = idx.row();
+	TBookmark bm = bookmarks.at(row);
+	TPage* pg = findPage(bm.pgid);
+	if (selectItemByPageID(bm.pgid)) {
+		pg->curRow = bm.row;
+		curRow = bm.row;
+		ui.table->selectRow(bm.row);
+		ui.table->scrollTo(ui.table->model()->index(bm.row, 0));
+	}
+	blwin->close();
 }
 
 // page
@@ -783,7 +826,7 @@ void MWindow::rowDelete() {
 	if (!ui.table->isEnabled()) return;
 	QModelIndexList list = ui.table->selectionModel()->selectedRows();
 	if (list.size() == 0) return;
-	qSort(list.begin(), list.end(), checkOrder);
+	std::sort(list.begin(), list.end(), checkOrder);
 	int row;
 	QUuid id;
 	int zRow = list.last().row();

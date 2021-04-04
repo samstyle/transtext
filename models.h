@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractTableModel>
+#include <QTableView>
 
 class TBModel : public QAbstractTableModel {
 	public:
@@ -23,5 +24,6 @@ class BMLModel : public QAbstractTableModel {
 		int rowCount(const QModelIndex& = QModelIndex()) const;
 		int columnCount(const QModelIndex& = QModelIndex()) const;
 		QVariant data(const QModelIndex&, int = Qt::DisplayRole) const;
-//		QVariant headerData(int,Qt::Orientation, int role = Qt::DisplayRole) const;
+		void update();
+		QModelIndex index(int row, int column, const QModelIndex& = QModelIndex()) const;
 };
