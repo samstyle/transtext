@@ -7,6 +7,7 @@
 #include "filetypes.h"
 
 #define NEW_LOADER 1
+#define NEW_SAVER 1
 
 QColor blkcol;
 TPage* curPage = nullptr;
@@ -1317,6 +1318,8 @@ void MWindow::saveIt() {
 	savePrj(prjPath);
 }
 
+#if !NEW_SAVER
+
 void saveLeaf7(QDataStream& strm, QTreeWidgetItem* par) {
 	int i;
 	QUuid id;
@@ -1372,6 +1375,8 @@ void saveTree(QDataStream& strm, QTreeWidgetItem* root, int saveroot = 0) {
 	saveLeaf7(strm, root);
 	strm << T7_END;
 }
+
+#endif
 
 QList<QUuid> getTreeIds(QTreeWidgetItem* root) {
 	QList<QUuid> res;
@@ -1445,6 +1450,20 @@ void MWindow::saveBranch() {
 }
 
 bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
+#if NEW_SAVER
+	if (path.isEmpty())
+		path = fdial.getSaveFileName(this,"Save book","","Book files (*.trb)", nullptr, QFileDialog::DontUseNativeDialog);		// prjPath
+	if (path.isEmpty())
+		return false;
+	if (!path.endsWith(".trb",Qt::CaseInsensitive))
+		path.append(".trb");
+	if (!root)
+		root = ui.tree->invisibleRootItem();
+	trb.save(path, root);
+	prjPath = path;
+	changed = 0;
+	return true;
+#else
 	QByteArray data;	// all data
 	QBuffer buf;
 	QDataStream strm;
@@ -1516,6 +1535,7 @@ bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 	prjPath = path;
 	changed = 0;
 	return true;
+#endif
 }
 
 void MWindow::saveSrc() {

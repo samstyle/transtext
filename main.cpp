@@ -5,8 +5,9 @@
 #include "replace.h"
 
 QList<TPage> book;
-QList <TIcon> icons;
-QList <TBookmark> bookmarks;
+QList<TIcon> icons;
+QList<TBookmark> bookmarks;
+QList<TImage> images;
 
 QList<TPage> getBook() {
 	return book;
@@ -198,11 +199,11 @@ QUuid addBookmark(TBookmark bm) {
 	if (bm.id.isNull()) {			// new bookmark
 		bm.id = QUuid::createUuid();
 		bookmarks.append(bm);
-		qDebug() << "new bm " << bm.id;
+//		qDebug() << "new bm " << bm.id;
 	} else {				// find if exists
 		tb = findBookmark(bm.id);
 		if (!tb) {
-			qDebug() << "new bm(2) " << bm.id;
+//			qDebug() << "new bm(2) " << bm.id;
 			bookmarks.append(bm);		// not found
 		} else {
 			tb->name = bm.name;		// found: update existing bookmark

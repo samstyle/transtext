@@ -28,6 +28,7 @@ class TRBLoader {
 		QDataStream strm;
 
 		QList<int> getlist();
+		void putlist(QList<int>&);
 		QTreeWidgetItem* add_item(QTreeWidgetItem*, QString, QUuid, QUuid=0);
 
 		void v7_load(QTreeWidgetItem*);
@@ -37,14 +38,20 @@ class TRBLoader {
 		int v7_load_tree(QTreeWidgetItem*);
 
 		int v7_save(QTreeWidgetItem*);
-		void v7_save_page(QUuid);
 		void v7_save_tree(QTreeWidgetItem*);
+		void v7_save_leaf(QTreeWidgetItem*);
 
 		void v8_load(QTreeWidgetItem*);
 		void v8_load_icons();
 		void v8_load_bookmarks();
 		void v8_load_pages();
 		void v8_load_tree(QTreeWidgetItem*);
+
+		int v8_save(QTreeWidgetItem*);
+		QByteArray v8_save_pages(QTreeWidgetItem*);
+		QByteArray v8_save_tree(QTreeWidgetItem*);
+		QByteArray v8_save_icons(QTreeWidgetItem*);
+		QByteArray v8_save_bookmarks(QTreeWidgetItem*);
 };
 
 class MWindow : public QMainWindow {

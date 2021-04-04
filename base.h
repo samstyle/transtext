@@ -102,6 +102,7 @@ struct TPage {
 	int flag;
 	int curRow;
 	QString name;
+	QList<QUuid> imgid;
 	QList<TLine> text;
 };
 
@@ -111,6 +112,11 @@ struct TBookmark {
 	int row;
 	QString name;
 	QString descr;
+};
+
+struct TImage {
+	QUuid id;
+	QImage img;
 };
 
 void prjInit();

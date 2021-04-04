@@ -318,14 +318,14 @@ void TRBLoader::v8_load(QTreeWidgetItem* root) {
 		v8_load_pages();
 		buf.seek(moff.at(1));
 		v8_load_tree(root);
-		if (moff.size() > 2) {
-			buf.seek(moff.at(2));
-			v8_load_icons();
-			if (moff.size() > 3) {
-				buf.seek(moff.at(3));
-				v8_load_bookmarks();
-			}
-		}
+	}
+	if (moff.size() > 2) {
+		buf.seek(moff.at(2));
+		v8_load_icons();
+	}
+	if (moff.size() > 3) {
+		buf.seek(moff.at(3));
+		v8_load_bookmarks();
 	}
 }
 
@@ -340,7 +340,7 @@ int TRBLoader::load(QString path, QTreeWidgetItem* root) {
 		sig = file.read(4);
 		data = file.readAll();
 		data = qUncompress(data);
-		buf.setData(data);
+		buf.setBuffer(&data);
 		buf.open(QBuffer::ReadOnly);
 		strm.setVersion(QDataStream::Qt_5_0);
 		strm.setDevice(&buf);
@@ -353,6 +353,8 @@ int TRBLoader::load(QString path, QTreeWidgetItem* root) {
 			res = 0;
 		}
 		buf.close();
+		strm.resetStatus();
+		strm.setDevice(nullptr);
 	} else {
 		QMessageBox::critical(nullptr, "Error", "Can't open file");
 		res = 0;
@@ -360,12 +362,44 @@ int TRBLoader::load(QString path, QTreeWidgetItem* root) {
 	return res;
 }
 
-void TRBLoader::v7_save_page(QUuid id) {
+// v7 save
 
+void TRBLoader::v7_save_leaf(QTreeWidgetItem* par) {
+	int i;
+	QUuid id;
+	QTreeWidgetItem* itm;
+	for (i = 0; i < par->childCount(); i++) {
+		itm = par->child(i);
+		id = QUuid(itm->data(0, roleId).toByteArray());
+		if (id.isNull()) {
+			strm << TT_DIR;
+			strm << TT_NAME << itm->text(0);
+			strm << TT_ICONID << QUuid(itm->data(0,roleIcon).toByteArray());
+			strm << TT_END;
+			v7_save_leaf(itm);
+		} else {
+			strm << TT_PAGE;
+			strm << TT_NAME << itm->text(0);
+			strm << TT_UUID << id;
+			strm << TT_END;
+		}
+	}
+	strm << TT_END;
 }
 
 void TRBLoader::v7_save_tree(QTreeWidgetItem* root) {
-
+	strm << T7_TREE;
+// TODO: option to save root element (for save-branch)
+#if 0
+	if (saveroot) {
+		strm << TT_DIR;
+		strm << TT_NAME << root->text(0);
+		strm << TT_ICONID << QUuid(root->data(0,roleIcon).toByteArray());
+		strm << TT_END;
+	}
+#endif
+	v7_save_leaf(root);
+	strm << T7_END;
 }
 
 QList<QUuid> getTreeIds(QTreeWidgetItem*);
@@ -373,17 +407,39 @@ QList<QUuid> getTreeIcons(QTreeWidgetItem*);
 QList<QUuid> getTreeBMrk(QTreeWidgetItem*);
 
 int TRBLoader::v7_save(QTreeWidgetItem* par) {
+//	qDebug() << "v7_save";
 	int res = 1;
 	QList<QUuid> idlist;
 	QUuid id;
 	TIcon* ico;
+	TPage* pg;
+	TLine line;
 	TBookmark* bm;
 // pages
+//	qDebug() << "begin (pages): " << buf.pos();
 	idlist = getTreeIds(par);
 	foreach(id, idlist) {
-		v7_save_page(id);
+		pg = findPage(id);
+		if (pg != NULL) {
+			strm << T7_PAGE;
+			strm << TP_UUID << pg->id;
+			strm << TP_FLAG << pg->flag;
+			foreach(line, pg->text) {
+				strm << TP_LINE;
+				strm << TL_TYPE << line.type;
+				strm << TL_FLAG << line.flag;
+				strm << TL_BMID << line.bmrkId;
+				strm << TL_SN << line.src.name;
+				strm << TL_ST << line.src.text;
+				strm << TL_TN << line.trn.name;
+				strm << TL_TT << line.trn.text;
+				strm << T7_END;
+			}
+			strm << T7_END;
+		}
 	}
 // icons
+//	qDebug() << "treeicons: " << buf.pos();
 	strm << T7_ICON;
 	idlist = getTreeIcons(par);
 	foreach(id, idlist) {
@@ -397,6 +453,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 	}
 	strm << T7_END;
 // bookmarks
+//	qDebug() << "bookmarks: " << buf.pos();
 	strm << T7_BMRK;
 	idlist = getTreeBMrk(par);
 	foreach(id, idlist) {
@@ -410,7 +467,106 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 	}
 	strm << T7_END;
 // tree
+//	qDebug() << "tree: " << buf.pos();
 	v7_save_tree(par);
+//	qDebug() << "end: " << buf.pos();
+	return res;
+}
+
+// v8
+
+void TRBLoader::putlist(QList<int>& lst) {
+	strm << lst.size();
+	for (int i = 0; i < lst.size(); i++) {
+		strm << lst.at(i);
+	}
+}
+
+void ba_puti(QByteArray& arr, int val) {
+	arr.append(val & 0xff);
+	arr.append((val >> 8) & 0xff);
+	arr.append((val >> 16) & 0xff);
+	arr.append((val >> 24) & 0xff);
+}
+
+QByteArray lst_to_ba(QList<int> lst) {
+	QByteArray res;
+	int off;
+	ba_puti(res, lst.size());
+	while (lst.size() > 0) {
+		off = lst.takeFirst();
+		ba_puti(res, off);
+	}
+	return res;
+}
+
+// page
+// 0	id (QUuid)
+// 1	flag (int)
+// 2	text data
+QByteArray v8_save_page(TPage* pg) {
+	QByteArray res;
+	QList<int> lst;
+
+	return res;
+}
+
+QByteArray TRBLoader::v8_save_pages(QTreeWidgetItem* root) {
+	QByteArray res;
+	QByteArray blk;
+	QList<int> lst;
+	QList<QUuid> ids = getTreeIds(root);
+	TPage* pg;
+	foreach (QUuid id, ids) {
+		pg = findPage(id);
+		if (pg != NULL) {
+			blk = v8_save_page(pg);
+			lst.append(res.size());
+			res.append(blk);
+		}
+	}
+	blk = lst_to_ba(lst);
+	res.prepend(blk);
+	return res;
+}
+
+QByteArray TRBLoader::v8_save_tree(QTreeWidgetItem* root) {
+
+}
+
+QByteArray TRBLoader::v8_save_icons(QTreeWidgetItem* root) {
+
+}
+
+QByteArray TRBLoader::v8_save_bookmarks(QTreeWidgetItem* root) {
+
+}
+
+int TRBLoader::v8_save(QTreeWidgetItem* root) {
+	int res = 1;
+	QList<int> lst;
+	QByteArray arr;
+	QByteArray blk;
+	// pages
+	blk = v8_save_pages(root);
+	lst.append(arr.size());
+	arr.append(blk);
+	// tree
+	blk = v8_save_tree(root);
+	lst.append(arr.size());
+	arr.append(blk);
+	// icons
+	blk = v8_save_icons(root);
+	lst.append(arr.size());
+	arr.append(blk);
+	// bookmarks
+	blk = v8_save_bookmarks(root);
+	lst.append(arr.size());
+	arr.append(blk);
+	// concat
+	blk = lst_to_ba(lst);
+	strm << blk;
+	strm << arr;
 	return res;
 }
 
@@ -418,15 +574,16 @@ int TRBLoader::save(QString path, QTreeWidgetItem* root) {
 	int res = 1;
 	QFile file(path);
 	QByteArray data;
-	buf.setData(data);
-	buf.open(QBuffer::WriteOnly);
-	buf.seek(0);
 	strm.setVersion(QDataStream::Qt_5_0);
+	buf.setBuffer(&data);
+	buf.open(QBuffer::WriteOnly);
 	strm.setDevice(&buf);
 
 	v7_save(root);
 
 	buf.close();
+	strm.resetStatus();
+	strm.setDevice(nullptr);
 	data = qCompress(data);
 	if (file.open(QFile::WriteOnly)) {
 		file.write("TRB7");
