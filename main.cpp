@@ -17,6 +17,7 @@ void prjInit() {
 	book.clear();
 	icons.clear();
 	bookmarks.clear();
+	images.clear();
 }
 
 TPage* putPage(TPage page) {

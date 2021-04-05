@@ -67,6 +67,7 @@ MWindow::MWindow() {
 
 	connect(ui.tree->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changePage()));
 	connect(ui.tree, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(pageInfo()));
+	connect(ui.tree, SIGNAL(itemChanged(QTreeWidgetItem*, int)),this,SLOT(treeItemChanged(QTreeWidgetItem*)));
 
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
 
@@ -906,6 +907,17 @@ void MWindow::disableTab() {
 	ui.table->update();
 }
 
+void MWindow::treeItemChanged(QTreeWidgetItem* itm) {
+	QUuid id = itm->data(0, roleId).toUuid();
+	TPage* pg;
+	if (!id.isNull()) {
+		pg = findPage(id);
+		if (pg != NULL) {
+			pg->name = itm->text(0);
+		}
+	}
+}
+
 void MWindow::changePage() {
 	if (curPage) {
 		curPage->curRow = ui.table->currentIndex().row();
@@ -1305,6 +1317,7 @@ void MWindow::openPrj(QString path) {
 	if (path == "") return;
 #if NEW_LOADER
 	prjInit();
+	ui.tree->clear();
 	if (trb.load(path, ui.tree->invisibleRootItem())) {
 		prjPath = path;
 		changed = 0;

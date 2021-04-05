@@ -29,7 +29,7 @@ QVariant BMLModel::data(const QModelIndex& idx, int role) const {
 					res = bm.name;
 					break;
 				case 1:
-					if (pg) res = QString("%0:%1").arg(bm.id.toString()).arg(bm.row);
+					if (pg) res = QString("%0:%1").arg(pg->name).arg(bm.row);
 					break;
 				case 2:
 					res = bm.descr;

@@ -130,6 +130,7 @@ class MWindow : public QMainWindow {
 		void pageInfo();
 		void bmList();
 		void goToBookmark(const QModelIndex&);
+		void treeItemChanged(QTreeWidgetItem*);
 
 		void saveBranch();
 

@@ -178,6 +178,25 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* par) {
 
 }
 
+void v7_sort_names(QTreeWidgetItem* root) {
+	QTreeWidgetItem* itm;
+	QUuid id;
+	TPage* pg;
+	int i;
+	for (i = 0; i < root->childCount(); i++) {
+		itm = root->child(i);
+		id = itm->data(0, roleId).toUuid();
+		if (id.isNull()) {
+			v7_sort_names(itm);
+		} else {
+			pg = findPage(id);
+			if (pg != NULL) {
+				pg->name = itm->text(0);
+			}
+		}
+	}
+}
+
 void TRBLoader::v7_load(QTreeWidgetItem* root) {
 	QTreeWidgetItem* par = root;
 	QUuid id;
@@ -275,6 +294,8 @@ void TRBLoader::v7_load(QTreeWidgetItem* root) {
 	}
 	if (err) {
 		prjInit();
+	} else {
+		v7_sort_names(root);
 	}
 }
 
