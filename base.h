@@ -44,6 +44,7 @@ enum {
 #define	T7_TREE	0x3E		// book tree
 #define T7_ICON	0x3D		// icons
 #define T7_BMRK	0x3C		// bookmarks
+#define T7_IMGS 0x3B		// images
 #define T7_END	0x00
 
 #define TI_ID	0x40		// uuid
@@ -59,6 +60,7 @@ enum {
 #define TP_ID	0x41		// page id (old)
 #define	TP_FLAG	0x42		// page flag
 #define TP_UUID	0x43		// page uuid
+#define TP_IMG	0x44		// image id
 
 #define	TP_LINE	0x03
 #define	TL_SN	0x84		// src name
@@ -97,12 +99,17 @@ struct TIcon {
 	QIcon icon;
 };
 
+struct TImage {
+	QString name;
+	QImage img;
+};
+
 struct TPage {
 	QUuid id;
 	int flag;
 	int curRow;
 	QString name;
-	QList<QUuid> imgid;
+	QList<TImage> imgs;
 	QList<TLine> text;
 };
 
@@ -112,11 +119,6 @@ struct TBookmark {
 	int row;
 	QString name;
 	QString descr;
-};
-
-struct TImage {
-	QUuid id;
-	QImage img;
 };
 
 void prjInit();
@@ -144,6 +146,10 @@ void rmBookmark(QUuid);
 QList<TBookmark>* get_bmlist_ptr();
 
 extern QList<TBookmark> bookmarks;
+
+//TImage* findImage(QUuid id);
+//TImage* addImage(TImage);
+//extern QList<TImage> images;
 
 void getCounts(TPage*,int&,int&);
 int getProgress(TPage*);

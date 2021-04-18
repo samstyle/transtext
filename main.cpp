@@ -7,7 +7,6 @@
 QList<TPage> book;
 QList<TIcon> icons;
 QList<TBookmark> bookmarks;
-QList<TImage> images;
 
 QList<TPage> getBook() {
 	return book;
@@ -17,7 +16,6 @@ void prjInit() {
 	book.clear();
 	icons.clear();
 	bookmarks.clear();
-	images.clear();
 }
 
 TPage* putPage(TPage page) {

@@ -7,6 +7,7 @@
 #include "ui_iconwindow.h"
 #include "ui_bookmark.h"
 #include "ui_bookmarks.h"
+#include "imgviewer.h"
 
 #include "models.h"
 #include "base.h"
@@ -36,22 +37,11 @@ class TRBLoader {
 		int v7_load_bookmarks();
 		int v7_load_page();
 		int v7_load_tree(QTreeWidgetItem*);
+		int v7_load_imgs();
 
 		int v7_save(QTreeWidgetItem*);
 		void v7_save_tree(QTreeWidgetItem*);
 		void v7_save_leaf(QTreeWidgetItem*);
-
-		void v8_load(QTreeWidgetItem*);
-		void v8_load_icons();
-		void v8_load_bookmarks();
-		void v8_load_pages();
-		void v8_load_tree(QTreeWidgetItem*);
-
-		int v8_save(QTreeWidgetItem*);
-		QByteArray v8_save_pages(QTreeWidgetItem*);
-		QByteArray v8_save_tree(QTreeWidgetItem*);
-		QByteArray v8_save_icons(QTreeWidgetItem*);
-		QByteArray v8_save_bookmarks(QTreeWidgetItem*);
 };
 
 class MWindow : public QMainWindow {
@@ -71,6 +61,7 @@ class MWindow : public QMainWindow {
 
 		QDialog* icowin;
 		QDialog* bmwin;
+		ImgViewer* iview;
 		QFileDialog fdial;
 
 		QDialog* blwin;
@@ -129,6 +120,7 @@ class MWindow : public QMainWindow {
 
 		void pageInfo();
 		void bmList();
+		void imgWork();
 		void goToBookmark(const QModelIndex&);
 		void treeItemChanged(QTreeWidgetItem*);
 

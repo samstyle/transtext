@@ -121,6 +121,7 @@ MWindow::MWindow() {
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
 
 	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
+	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(imgWork()));
 
 	icowin = new QDialog(this);
 	icoui.setupUi(icowin);
@@ -138,6 +139,8 @@ MWindow::MWindow() {
 	blui.table->setModel(blmod);
 	connect(ui.actBookmarks, SIGNAL(triggered()), this, SLOT(bmList()));
 	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
+
+	iview = new ImgViewer(this);
 }
 
 bool askSure(QString text) {
@@ -1748,4 +1751,8 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	}
 	changed = 1;
 	return itm;
+}
+
+void MWindow::imgWork() {
+	iview->show();
 }

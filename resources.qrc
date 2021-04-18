@@ -17,5 +17,6 @@
         <file>Paperclip.png</file>
         <file>talk.png</file>
         <file>bookmark.png</file>
+        <file>picture.png</file>
     </qresource>
 </RCC>
