@@ -12,9 +12,9 @@ void TBModel::updateCell(int row, int col) {
 }
 
 void TBModel::updateLine(int row) {
-	for (int col = 0; col < columnCount(); col++) {
-		updateCell(row, col);
-	}
+	QModelIndex bidx = index(row, 0);
+	QModelIndex eidx = index(row, columnCount() - 1);
+	emit dataChanged(bidx, eidx);
 }
 
 TBModel::TBModel(QObject* p):QAbstractTableModel(p) {}

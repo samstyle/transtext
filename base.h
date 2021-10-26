@@ -61,6 +61,7 @@ enum {
 #define	TP_FLAG	0x42		// page flag
 #define TP_UUID	0x43		// page uuid
 #define TP_IMG	0x44		// image id
+#define TP_CURL	0x45		// current line (int)
 
 #define	TP_LINE	0x03
 #define	TL_SN	0x84		// src name

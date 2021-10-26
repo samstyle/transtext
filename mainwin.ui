@@ -94,6 +94,9 @@
          <property name="gridStyle">
           <enum>Qt::DotLine</enum>
          </property>
+         <property name="wordWrap">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
        <item>
@@ -210,6 +213,8 @@
     <addaction name="actInsertSrc"/>
     <addaction name="separator"/>
     <addaction name="actSaveSrc"/>
+    <addaction name="separator"/>
+    <addaction name="actImages"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -431,6 +436,11 @@
    </property>
    <property name="text">
     <string>Bookmarks</string>
+   </property>
+  </action>
+  <action name="actImages">
+   <property name="text">
+    <string>Images...</string>
    </property>
   </action>
  </widget>

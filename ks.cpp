@@ -95,6 +95,8 @@ TPage loadKS(QString fnam, int cpage) {
 			codec = QTextCodec::codecForName("Shift-JIS");
 			break;
 	}
+	// to skip bom if present
+
 	while (!file.atEnd()) {
 		line = codec->toUnicode(file.readLine());
 		line.remove("\r");

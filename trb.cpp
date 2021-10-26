@@ -128,6 +128,9 @@ int TRBLoader::v7_load_page() {
 			case TP_FLAG:
 				strm >> page.flag;
 				break;
+			case TP_CURL:
+				strm >> page.curRow;
+				break;
 			case TP_IMG:
 				do {
 					strm >> type;
@@ -272,29 +275,6 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 	}
 	return err;
 }
-
-/*
-int TRBLoader::v7_load_imgs() {
-	int err = 0;
-	int type;
-	TImage img;
-	do {
-		strm >> type;
-		switch (type) {
-			case T7_END: break;			// end
-			case TI_ID: strm >> img.id; break;
-			case TI_NAME: strm >> img.name; break;
-			case TI_ICO: strm >> img.img; break;
-			case TI_END: addImage(img); break;
-			default:
-				idError(T7_IMGS, type);
-				err = 1;
-				break;
-		}
-	} while (!err && (type != T7_END));
-	return err;
-}
-*/
 
 void v7_sort_names(QTreeWidgetItem* root) {
 	QTreeWidgetItem* itm;
@@ -443,6 +423,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 			strm << T7_PAGE;
 			strm << TP_UUID << pg->id;
 			strm << TP_FLAG << pg->flag;
+			strm << TP_CURL << pg->curRow;
 			foreach(line, pg->text) {
 				strm << TP_LINE;
 				strm << TL_TYPE << line.type;

@@ -54,6 +54,7 @@ MWindow::MWindow() {
 	connect(ui.actOpenSrc,SIGNAL(triggered()),this,SLOT(openSrc()));
 	connect(ui.actInsertSrc,SIGNAL(triggered()),this,SLOT(insertSrc()));
 	connect(ui.actSaveSrc,SIGNAL(triggered()),this,SLOT(saveSrc()));
+	connect(ui.actImages,SIGNAL(triggered()),this,SLOT(imgWork()));
 
 	connect(ui.actSplitLine,SIGNAL(triggered()),this,SLOT(splitLine()));
 	connect(ui.actSplitName,SIGNAL(triggered()),this,SLOT(splitName()));
@@ -258,6 +259,10 @@ void MWindow::fillSJMenu() {
 				txt.prepend(QString("%0 : ").arg(i));
 				sjMenu->addAction(txt)->setData(i);
 			}
+		} else if (line->src.text.startsWith("[")) {
+			txt = line->src.text;
+			txt.prepend(QString("%0 : ").arg(i));
+			sjMenu->addAction(txt)->setData(i);
 		}
 	}
 }
@@ -459,6 +464,12 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 				rowInsert(false);
 				break;
 		}
+	} else if (ev->modifiers() & Qt::AltModifier) {
+		switch (ev->key()) {
+			case Qt::Key_Insert:
+				rowInsert(true);
+				break;
+		}
 	} else {
 		switch (ev->key()) {
 			case Qt::Key_Up:
@@ -480,9 +491,6 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.widFind->hide();
 					ui.table->setFocus();
 				}
-				break;
-			case Qt::Key_Insert:
-				rowInsert(false);
 				break;
 		}
 	}
@@ -923,7 +931,7 @@ void MWindow::treeItemChanged(QTreeWidgetItem* itm) {
 
 void MWindow::changePage() {
 	if (curPage) {
-		curPage->curRow = ui.table->currentIndex().row();
+		// curPage->curRow = ui.table->currentIndex().row();
 		curPage = nullptr;
 	}
 	if (ui.tree->selectedItems().size() != 1) {
@@ -963,6 +971,7 @@ void MWindow::changePage() {
 void MWindow::changeRow(QItemSelection) {
 	int row = getCurrentRow();
 	curRow = row;
+	curPage->curRow = row;
 	QString text;
 	if (row < 0) {
 		setEdit(false);
@@ -1622,7 +1631,7 @@ QList<TPage> openFiles(QFileDialog::FileMode mode) {
 	QList<TPage> res;
 	QFileDialog qfd;
 	QStringList filters;
-	qfd.setOption(QFileDialog::DontUseNativeDialog, false);
+	qfd.setOption(QFileDialog::DontUseNativeDialog, true);
 	filters << "Text files (*)"
 		<< "EAGLS script(*.txt)"
 		<< "KS files (*.ks)"
@@ -1754,5 +1763,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 }
 
 void MWindow::imgWork() {
+	if (curPage == nullptr) return;
+	iview->setWindowTitle(QString("Images for page '%0'").arg(curPage->name));
 	iview->show();
 }
