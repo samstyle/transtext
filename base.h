@@ -69,6 +69,7 @@ enum {
 #define	TL_TN	0x86		// trn name
 #define	TL_TT	0x87		// trn text
 #define TL_BMID	0x88		// bookmark id
+#define TL_PIC	0x89		// picture
 #define	TL_TYPE	TP_ID
 #define	TL_FLAG	TP_FLAG
 
@@ -90,6 +91,7 @@ struct TLine {
 	int type = TL_TEXT;
 	int flag = 0;
 	QUuid bmrkId;
+	QUuid picId;
 	TPhrase src;
 	TPhrase trn;
 };
@@ -110,7 +112,8 @@ struct TPage {
 	int flag;
 	int curRow;
 	QString name;
-	QList<TImage> imgs;
+	QMap<QUuid,TImage> imgs;
+//	QList<TImage> imgs;
 	QList<TLine> text;
 };
 

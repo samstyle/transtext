@@ -77,6 +77,7 @@ QStringList splitLine(QString text, QString div) {
 void normLine(TLine& line) {
 	QStringList pair;
 	int pos;
+	line.src.text.remove("\n");
 	line.src.name.remove(QObject::trUtf8("　"));
 	line.src.text.remove(QObject::trUtf8("　"));
 	pair.clear();

@@ -4,7 +4,7 @@
 BMLModel::BMLModel(QObject* p):QAbstractTableModel(p) {}
 
 int BMLModel::columnCount(const QModelIndex&) const {
-	return 3;
+	return 2;
 }
 
 int BMLModel::rowCount(const QModelIndex&) const {
@@ -31,9 +31,9 @@ QVariant BMLModel::data(const QModelIndex& idx, int role) const {
 				case 1:
 					if (pg) res = QString("%0:%1").arg(pg->name).arg(bm.row);
 					break;
-				case 2:
-					res = bm.descr;
-					break;
+				//case 2:
+				//	res = bm.descr;
+				//	break;
 			}
 			break;
 	}

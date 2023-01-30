@@ -18,5 +18,6 @@
         <file>talk.png</file>
         <file>bookmark.png</file>
         <file>picture.png</file>
+        <file>clipboard.png</file>
     </qresource>
 </RCC>

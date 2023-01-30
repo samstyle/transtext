@@ -111,6 +111,17 @@ int TRBLoader::v7_load_bookmarks() {
 	return err;
 }
 
+void filter_bookmarks() {
+	QList<TBookmark>::iterator it;
+	QList<QUuid> lst;
+	for (it = bookmarks.begin(); it != bookmarks.end(); it++) {
+		if (findPage(it->pgid) == NULL)
+			lst.append(it->id);
+	}
+	while(!lst.isEmpty())
+		rmBookmark(lst.takeFirst());
+}
+
 int TRBLoader::v7_load_page() {
 	int type;
 	int err = 0;
@@ -119,6 +130,7 @@ int TRBLoader::v7_load_page() {
 	TLine lin;
 	TImage img;
 	TBookmark bm;
+	QUuid id;
 	strm >> type;
 	while (type != T7_END) {
 		switch(type) {
@@ -135,11 +147,14 @@ int TRBLoader::v7_load_page() {
 				do {
 					strm >> type;
 					switch(type) {
+						case TI_ID: strm >> id; break;
 						case TI_NAME: strm >> img.name; break;
 						case TI_ICO: strm >> img.img; break;
 						case TI_END:
 							if (!img.name.isEmpty()) {
-								page.imgs.append(img);
+								if (id.isNull())
+									id = QUuid::createUuid();
+								page.imgs[id] = img;
 								img.name.clear();
 							}
 							break;
@@ -154,6 +169,7 @@ int TRBLoader::v7_load_page() {
 				lin.type = TL_TEXT;
 				lin.flag = 0;
 				lin.bmrkId = QUuid();
+				lin.picId = QUuid();
 				lin.src.name.clear();
 				lin.src.text.clear();
 				lin.trn.name.clear();
@@ -167,8 +183,8 @@ int TRBLoader::v7_load_page() {
 						case TL_TT: strm >> lin.trn.text; break;
 						case TL_TYPE: strm >> lin.type; break;
 						case TL_FLAG: strm >> lin.flag; break;
-						case TL_BMID: strm >> lin.bmrkId;
-							break;
+						case TL_BMID: strm >> lin.bmrkId; break;
+						case TL_PIC: strm >> lin.picId; break;
 						default:
 							idError(TP_LINE, type);
 							err = 1;
@@ -325,6 +341,7 @@ void TRBLoader::v7_load(QTreeWidgetItem* root) {
 		prjInit();
 	} else {
 		v7_sort_names(root);
+		filter_bookmarks();
 	}
 }
 
@@ -429,14 +446,17 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 				strm << TL_TYPE << line.type;
 				strm << TL_FLAG << line.flag;
 				strm << TL_BMID << line.bmrkId;
+				strm << TL_PIC << line.picId;
 				strm << TL_SN << line.src.name;
 				strm << TL_ST << line.src.text;
 				strm << TL_TN << line.trn.name;
 				strm << TL_TT << line.trn.text;
 				strm << T7_END;
 			}
-			foreach(img, pg->imgs) {
+			foreach(id, pg->imgs.keys()) {
+				img = pg->imgs[id];
 				strm << TP_IMG;
+				strm << TI_ID << id;
 				strm << TI_NAME << img.name;
 				strm << TI_ICO << img.img;
 				strm << TI_END;

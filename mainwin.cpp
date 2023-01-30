@@ -71,6 +71,8 @@ MWindow::MWindow() {
 	connect(ui.tree, SIGNAL(itemChanged(QTreeWidgetItem*, int)),this,SLOT(treeItemChanged(QTreeWidgetItem*)));
 
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
+	// connect(ui.table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(askBookmark()));
+	connect(ui.table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(play()));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
 
@@ -98,6 +100,9 @@ MWindow::MWindow() {
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Labels");
 	bmMenu = tbMenu->addMenu(QIcon(":/bookmark.png"),"Bookmarks");
+	imMenu = tbMenu->addMenu("Pictures");
+	imMenu->addAction(ui.actPicture);
+	imMenu->addAction(ui.actDelPicture);
 	tbMenu->addAction(ui.actFindUntrn);
 	tbMenu->addAction(ui.actSplitName);
 	tbMenu->addAction(ui.actJoinLine);
@@ -120,9 +125,12 @@ MWindow::MWindow() {
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
+	connect(ui.actPicture, SIGNAL(triggered()), this, SLOT(imgSelect()));
+	connect(ui.actDelPicture, SIGNAL(triggered()), this, SLOT(imgDelete()));
 
 	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
 	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(imgWork()));
+	connect(ui.tbBookmark,SIGNAL(released()),this,SLOT(bmList()));
 
 	icowin = new QDialog(this);
 	icoui.setupUi(icowin);
@@ -142,6 +150,11 @@ MWindow::MWindow() {
 	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
 
 	iview = new ImgViewer(this);
+	connect(iview, SIGNAL(picClicked(QUuid)), this, SLOT(imgSelected(QUuid)));
+
+	player = new xPlayer();
+	player->setFixedSize(1280, 720);
+	connect(player, SIGNAL(clicked()), this, SLOT(playNext()));
 }
 
 bool askSure(QString text) {
@@ -233,10 +246,11 @@ void MWindow::fillSJMenu() {
 	TLine* line;
 	TBookmark* bm;
 	int i;
-	if (curRow < 0) {
-		bmMenu->setEnabled(false);
+	if ((curRow < 0) || (curRow >= curPage->text.size())) {
+		ui.actAddBookmark->setEnabled(false);
+		ui.actRmBookmark->setEnabled(false);
 	} else {
-		bmMenu->setEnabled(true);
+		ui.actAddBookmark->setEnabled(true);
 		ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
 	}
 	for (i = 0; i < curPage->text.size(); i++) {
@@ -244,8 +258,9 @@ void MWindow::fillSJMenu() {
 
 		if (!line->bmrkId.isNull()) {
 			bm = findBookmark(line->bmrkId);
-			if (bm != nullptr)
+			if (bm != nullptr) {
 				bmMenu->addAction(bm->name)->setData(i);
+			}
 		}
 		if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
 			if (line->trn.text.isEmpty()) {
@@ -277,6 +292,7 @@ void MWindow::appendCbrd() {
 	tlin.src.text = txt;
 	normLine(tlin);
 	curPage->text.append(tlin);
+	changed = 1;
 	model->update();
 }
 
@@ -675,7 +691,7 @@ void MWindow::askBookmark() {
 
 void MWindow::newBookmark() {
 	TBookmark bm;
-	bm.id = QUuid();
+	bm.id = QUuid::fromString(bmui.leid->text());
 	bm.name = bmui.lename->text();
 	bm.descr = bmui.tedescr->toPlainText();
 	bm.pgid = curPage->id;
@@ -862,7 +878,21 @@ void MWindow::rowInsert(bool before) {
 	TLine line;
 	line.type = TL_TEXT;
 	line.flag = 0;
-	int row = (curRow < 0) ? 0 : (before ? curRow : curRow + 1);
+	int row;
+	if (curRow < 0) {
+		row = 0;
+		line.picId = 0;
+	} else if (before) {
+		row = curRow;
+		if (row > 0) {
+			line.picId = curPage->text[curRow-1].picId;
+		} else {
+			line.picId = 0;
+		}
+	} else {
+		row = curRow + 1;
+		line.picId = curPage->text[curRow].picId;
+	}
 	curPage->text.insert(row,line);
 	model->insertRow(row);
 	changed = 1;
@@ -966,6 +996,7 @@ void MWindow::changePage() {
 		}
 	}
 	ui.widFind->hide();
+	fillSJMenu();
 }
 
 void MWindow::changeRow(QItemSelection) {
@@ -975,7 +1006,8 @@ void MWindow::changeRow(QItemSelection) {
 	QString text;
 	if (row < 0) {
 		setEdit(false);
-		ui.labInfo->setText("");
+		ui.labInfo->clear();
+		ui.labUuid->clear();
 	} else {
 		if ((curPage->text[row].type == TL_TEXT) || (curPage->text[row].type == TL_SELECT)) {
 			ui.srcname->setText(curPage->text[row].src.name);
@@ -1000,9 +1032,11 @@ void MWindow::changeRow(QItemSelection) {
 			}
 			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
 			ui.labInfo->setText(QString("%0 / %1").arg(curRow).arg(curPage->text.size()));
+			ui.labUuid->setText(curPage->text[curRow].picId.toString());
 		} else {
 			setEdit(false);
-			ui.labInfo->setText("");
+			ui.labInfo->clear();
+			ui.labUuid->clear();
 		}
 	}
 }
@@ -1766,4 +1800,94 @@ void MWindow::imgWork() {
 	if (curPage == nullptr) return;
 	iview->setWindowTitle(QString("Images for page '%0'").arg(curPage->name));
 	iview->show();
+}
+
+void MWindow::imgSelect() {
+	if (curPage == nullptr) return;
+	iview->setWindowTitle(QString("Images for page '%0'").arg(curPage->name));
+	iview->show(IMV_SELECT);
+}
+
+void MWindow::imgSelected(QUuid id) {
+	if (curPage == nullptr) return;
+	if (curRow < 0) return;
+	int row = curRow;
+	QUuid lastid = curPage->text[row].picId;
+	do {
+		curPage->text[row].picId = id;
+		row++;
+		if (row >= curPage->text.size()) break;
+	} while (curPage->text[row].picId == lastid);
+}
+
+void MWindow::imgDelete() {
+	if (curPage == nullptr) return;
+	if (curRow < 0) return;
+	QUuid id = 0;
+	if (curRow > 0) {
+		id = curPage->text[curRow - 1].picId;
+		if (id == curPage->text[curRow].picId)
+			id = 0;
+	}
+	imgSelected(id);
+}
+
+// player
+
+void MWindow::play() {
+	if (curPage == nullptr) return;
+	int row = curPage->curRow;
+	if (row < 0) return;
+
+	QUuid picid = curPage->text[row].picId;
+	QPixmap pxm(1280,720);
+	if (curPage->imgs.contains(picid)) {
+		pxm = QPixmap::fromImage(curPage->imgs[picid].img).scaled(1280,720);
+	} else {
+		pxm.fill(Qt::black);
+	}
+	QString txt;
+	TLine lin = curPage->text.at(row);
+	int flag = 0;
+	if (lin.trn.text.isEmpty()) {
+		txt = lin.src.text;
+		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
+	} else {
+		txt = lin.trn.text;
+		flag = Qt::TextWordWrap;
+	}
+	QFont fnt;
+	fnt.setPixelSize(32);
+	QPainter pnt(&pxm);
+	pnt.setFont(fnt);
+	pnt.setPen(Qt::white);
+	pnt.fillRect(0, 520, 1280, 200, QBrush(QColor(90,90,90,120)));
+	pnt.drawText(10,530, 1260, 180, flag, txt);
+	if (!lin.src.name.isEmpty()) {
+		pnt.fillRect(5,480,640,38,QBrush(QColor(90,90,90,120)));
+		if (lin.trn.name.isEmpty()) {
+			pnt.drawText(10,482,630,34,0,lin.src.name);
+		} else {
+			pnt.drawText(10,482,630,34,0,lin.trn.name);
+		}
+	}
+	pnt.end();
+
+	player->setPixmap(pxm);
+
+	// draw frame for current row on player
+	// click on player = draw next line
+
+	player->show();
+}
+
+void MWindow::playNext() {
+	lineDown();
+	play();
+}
+
+void xPlayer::mousePressEvent(QMouseEvent *ev) {
+	if (ev->button() == Qt::LeftButton) {
+		emit clicked();
+	}
 }

@@ -11,7 +11,7 @@ QStringList parseEAGLCom(QString& line) {
 		line.clear();
 	} else {
 		QString pars = line.mid(pos1 + 1, pos2 - pos1 - 1);
-		res = pars.split(",",QString::SkipEmptyParts);
+		res = pars.split(",",Qt::SkipEmptyParts);
 		for (int i = 0; i < res.size(); i++) {
 			res[i] = res[i].remove("\"");
 		}
@@ -55,7 +55,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 		tlin.type = TL_LABEL;
 		page->text.append(tlin);
 	} else if (line.startsWith("#")) {
-		*name = line.split(QRegExp("[#=]"),QString::SkipEmptyParts).first();
+		*name = line.split(QRegularExpression("[#=]"),Qt::SkipEmptyParts).first();
 	} else if (QString("123456789").contains(line.at(0))) {
 		tlin.type = TL_COM;
 		num = line;
@@ -189,12 +189,20 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 		parseEAGLine(line,page,name);
 	} else if (line.startsWith("}")) {
 		pos = line.indexOf(";");
-		num = line.mid(1,pos-1);
+		if (pos < 0) {
+			num = line.mid(1);
+		} else {
+			num = line.mid(1,pos-1);
+		}
 		tlin.src.text = QString("[ endif.%1 ]").arg(num);
 		tlin.type = TL_TEXT;
 		page->text.append(tlin);
-		line = line.mid(pos+1);
-		parseEAGLine(line,page,name);
+		if (pos < 0) {
+			line.clear();
+		} else {
+			line = line.mid(pos+1);
+			parseEAGLine(line,page,name);
+		}
 	} else if (line.startsWith("_")) {
 
 	} else if (line.startsWith("&")) {

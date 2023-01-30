@@ -146,6 +146,31 @@
           </widget>
          </item>
          <item>
+          <widget class="QToolButton" name="tbBookmark">
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/bookmark.png</normaloff>:/bookmark.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="tbRec">
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/clipboard.png</normaloff>:/clipboard.png</iconset>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="horizontalSpacer_2">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -157,6 +182,13 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="labUuid">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QLabel" name="labInfo">
@@ -188,7 +220,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -441,6 +473,20 @@
   <action name="actImages">
    <property name="text">
     <string>Images...</string>
+   </property>
+  </action>
+  <action name="actPicture">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/picture.png</normaloff>:/picture.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set picture</string>
+   </property>
+  </action>
+  <action name="actDelPicture">
+   <property name="text">
+    <string>Remove picture</string>
    </property>
   </action>
  </widget>

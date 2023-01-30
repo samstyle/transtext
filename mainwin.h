@@ -44,6 +44,16 @@ class TRBLoader {
 		void v7_save_leaf(QTreeWidgetItem*);
 };
 
+class xPlayer : public QLabel {
+	Q_OBJECT
+	public:
+		xPlayer() {}
+	signals:
+		void clicked();
+	protected:
+		void mousePressEvent(QMouseEvent*);
+};
+
 class MWindow : public QMainWindow {
 	Q_OBJECT
 	public:
@@ -61,6 +71,7 @@ class MWindow : public QMainWindow {
 
 		QDialog* icowin;
 		QDialog* bmwin;
+		xPlayer* player;
 		ImgViewer* iview;
 		QFileDialog fdial;
 
@@ -76,8 +87,8 @@ class MWindow : public QMainWindow {
 		QMenu* tbMenu;
 		QMenu* sjMenu;
 		QMenu* bmMenu;
+		QMenu* imMenu;
 		QMenu* treeMenu;
-		void fillSJMenu();
 
 		void fillBlock(const QList<TLine>*);
 		void disableTab();
@@ -106,6 +117,9 @@ class MWindow : public QMainWindow {
 		void jumpLine(QAction*);
 		void findUntrn();
 
+		void play();
+		void playNext();
+
 		void findStr(QString);
 		void findNext();
 		void findPrev();
@@ -123,6 +137,10 @@ class MWindow : public QMainWindow {
 		void imgWork();
 		void goToBookmark(const QModelIndex&);
 		void treeItemChanged(QTreeWidgetItem*);
+
+		void imgSelect();
+		void imgSelected(QUuid);
+		void imgDelete();
 
 		void saveBranch();
 
@@ -150,6 +168,7 @@ class MWindow : public QMainWindow {
 		void askBookmark();
 		void askRmBookmark();
 		void newBookmark();
+		void fillSJMenu();
 
 		void newPrj();
 		void mergePrj(QString path = "");
