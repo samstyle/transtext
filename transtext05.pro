@@ -10,7 +10,6 @@ QT += core gui widgets
 
 # Input
 HEADERS += base.h mainwin.h filetypes.h \
-    imgviewer.h \
     models.h \
     replace.h
 FORMS += mainwin.ui \
@@ -23,7 +22,6 @@ SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp \
     bmlmodel.cpp \
     enm.cpp \
     eagls.cpp \
-    imgviewer.cpp \
     replace.cpp \
     trb.cpp
 RESOURCES += resources.qrc

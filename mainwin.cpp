@@ -155,9 +155,6 @@ MWindow::MWindow() {
 	connect(ui.actBookmarks, SIGNAL(triggered()), this, SLOT(bmList()));
 	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
 
-	iview = new ImgViewer(this);
-	connect(iview, SIGNAL(picClicked(QUuid)), this, SLOT(imgSelected(QUuid)));
-
 	player = new xPlayer();
 	player->setFixedSize(1280, 720);
 	connect(player, SIGNAL(clicked()), this, SLOT(playNext()));
@@ -1820,42 +1817,6 @@ void MWindow::rmImgDir() {
 	curItem->setData(0, roleImgDir, "");
 }
 
-void MWindow::imgWork() {
-	if (curPage == nullptr) return;
-	iview->setWindowTitle(QString("Images for page '%0'").arg(curPage->name));
-	iview->show();
-}
-
-void MWindow::imgSelect() {
-	if (curPage == nullptr) return;
-	iview->setWindowTitle(QString("Images for page '%0'").arg(curPage->name));
-	iview->show(IMV_SELECT);
-}
-
-void MWindow::imgSelected(QUuid id) {
-	if (curPage == nullptr) return;
-	if (curRow < 0) return;
-	int row = curRow;
-	QUuid lastid = curPage->text[row].picId;
-	do {
-		curPage->text[row].picId = id;
-		row++;
-		if (row >= curPage->text.size()) break;
-	} while (curPage->text[row].picId == lastid);
-}
-
-void MWindow::imgDelete() {
-	if (curPage == nullptr) return;
-	if (curRow < 0) return;
-	QUuid id = 0;
-	if (curRow > 0) {
-		id = curPage->text[curRow - 1].picId;
-		if (id == curPage->text[curRow].picId)
-			id = 0;
-	}
-	imgSelected(id);
-}
-
 // player
 
 void fillImages(TPage* pg, QString imgdir) {
@@ -1863,11 +1824,14 @@ void fillImages(TPage* pg, QString imgdir) {
 	QString img;
 	int cnt = pg->text.size();
 	int i;
+	QString txt;
 	for (i = 0; i < cnt; i++) {
+		txt = pg->text[i].src.text;
+		txt.remove(" ");
 		if (imgdir.isEmpty()) {
 			pg->text[i].imgpath.clear();
-		} else if (pg->text[i].src.text.startsWith("[BG:")) {
-			img = pg->text[i].src.text.mid(4);
+		} else if (txt.startsWith("[BG:")) {
+			img = txt.mid(4);
 			img.remove("]");
 			img.prepend("/");
 			img.prepend(imgdir);

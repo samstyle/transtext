@@ -7,7 +7,6 @@
 #include "ui_iconwindow.h"
 #include "ui_bookmark.h"
 #include "ui_bookmarks.h"
-#include "imgviewer.h"
 
 #include "models.h"
 #include "base.h"
@@ -76,7 +75,6 @@ class MWindow : public QMainWindow {
 		QDialog* icowin;
 		QDialog* bmwin;
 		xPlayer* player;
-		ImgViewer* iview;
 		QFileDialog fdial;
 
 		QDialog* blwin;
@@ -144,10 +142,6 @@ class MWindow : public QMainWindow {
 
 		void setImgDir();
 		void rmImgDir();
-		void imgWork();
-		void imgSelect();
-		void imgSelected(QUuid);
-		void imgDelete();
 
 		void saveBranch();
 
