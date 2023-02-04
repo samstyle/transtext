@@ -489,6 +489,24 @@
     <string>Remove picture</string>
    </property>
   </action>
+  <action name="actSetImgDir">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/folder.png</normaloff>:/folder.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set Images Dir</string>
+   </property>
+  </action>
+  <action name="actRmImgDir">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/delete.png</normaloff>:/delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove Images Dir</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>srcname</tabstop>

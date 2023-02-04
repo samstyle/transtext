@@ -54,7 +54,7 @@ MWindow::MWindow() {
 	connect(ui.actOpenSrc,SIGNAL(triggered()),this,SLOT(openSrc()));
 	connect(ui.actInsertSrc,SIGNAL(triggered()),this,SLOT(insertSrc()));
 	connect(ui.actSaveSrc,SIGNAL(triggered()),this,SLOT(saveSrc()));
-	connect(ui.actImages,SIGNAL(triggered()),this,SLOT(imgWork()));
+//	connect(ui.actImages,SIGNAL(triggered()),this,SLOT(imgWork()));
 
 	connect(ui.actSplitLine,SIGNAL(triggered()),this,SLOT(splitLine()));
 	connect(ui.actSplitName,SIGNAL(triggered()),this,SLOT(splitName()));
@@ -85,6 +85,9 @@ MWindow::MWindow() {
 	treeMenu->addAction(ui.actIcon);
 	treeMenu->addAction(ui.actSort);
 	treeMenu->addSeparator();
+	treeMenu->addAction(ui.actSetImgDir);
+	treeMenu->addAction(ui.actRmImgDir);
+	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actMerge);
 	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actDelPage);
@@ -96,13 +99,15 @@ MWindow::MWindow() {
 	connect(ui.actSort,SIGNAL(triggered()),this,SLOT(sortTree()));
 	connect(ui.actMerge, SIGNAL(triggered()), this, SLOT(mergePages()));
 	connect(ui.actIcon, SIGNAL(triggered()), this, SLOT(changeIcon()));
+	connect(ui.actSetImgDir,SIGNAL(triggered()),this,SLOT(setImgDir()));
+	connect(ui.actRmImgDir,SIGNAL(triggered()),this,SLOT(rmImgDir()));
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Labels");
 	bmMenu = tbMenu->addMenu(QIcon(":/bookmark.png"),"Bookmarks");
-	imMenu = tbMenu->addMenu("Pictures");
-	imMenu->addAction(ui.actPicture);
-	imMenu->addAction(ui.actDelPicture);
+	// imMenu = tbMenu->addMenu("Pictures");
+	// imMenu->addAction(ui.actPicture);
+	// imMenu->addAction(ui.actDelPicture);
 	tbMenu->addAction(ui.actFindUntrn);
 	tbMenu->addAction(ui.actSplitName);
 	tbMenu->addAction(ui.actJoinLine);
@@ -129,7 +134,8 @@ MWindow::MWindow() {
 	connect(ui.actDelPicture, SIGNAL(triggered()), this, SLOT(imgDelete()));
 
 	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
-	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(imgWork()));
+	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(setImgDir()));
+//	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(imgWork()));
 	connect(ui.tbBookmark,SIGNAL(released()),this,SLOT(bmList()));
 
 	icowin = new QDialog(this);
@@ -155,6 +161,7 @@ MWindow::MWindow() {
 	player = new xPlayer();
 	player->setFixedSize(1280, 720);
 	connect(player, SIGNAL(clicked()), this, SLOT(playNext()));
+	connect(player, SIGNAL(clicked_r()), this, SLOT(playPrev()));
 }
 
 bool askSure(QString text) {
@@ -311,7 +318,7 @@ void MWindow::setProgress() {
 		ui.progress->setValue(0);
 	} else {
 		int tot,trn;
-		if (curItem->data(0,Qt::UserRole) == 0) {
+		if (curItem->data(0, roleId) == 0) {
 			trn = 0;
 			tot = 1;
 		} else {
@@ -539,7 +546,7 @@ void MWindow::lineUp() {
 	do {
 		curRow--;
 	} while ((curRow > 0) && ui.table->isRowHidden(curRow));
-	if (curRow < 0) return;
+	if (curRow < 0) curRow = 0;
 	ui.table->selectRow(curRow);
 }
 
@@ -774,7 +781,7 @@ void MWindow::delPage() {
 void MWindow::mergePages() {
 	QList<QTreeWidgetItem*> items = ui.tree->selectedItems();
 	if (items.size() < 2) return;
-	QUuid pid(items.first()->data(0, Qt::UserRole).toByteArray());
+	QUuid pid(items.first()->data(0, roleId).toByteArray());
 	if (pid.isNull()) return;
 	TPage* par = findPage(pid);
 	TPage* pg;
@@ -787,7 +794,7 @@ void MWindow::mergePages() {
 	QTreeWidgetItem* itm;
 	QUuid id;
 	foreach(itm, items) {
-		id = QUuid(itm->data(0, Qt::UserRole).toByteArray());
+		id = QUuid(itm->data(0, roleId).toByteArray());
 		if (!id.isNull()) {
 			pg = findPage(id);
 			if (pg) {
@@ -807,7 +814,7 @@ void MWindow::mergePages() {
 }
 
 void MWindow::delItem(QTreeWidgetItem* item) {
-	QUuid id(item->data(0,Qt::UserRole).toByteArray());
+	QUuid id(item->data(0, roleId).toByteArray());
 	if (id.isNull()) {
 		for (int i = 0; i < item->childCount(); i++) {
 			delItem(item->child(i));
@@ -881,17 +888,17 @@ void MWindow::rowInsert(bool before) {
 	int row;
 	if (curRow < 0) {
 		row = 0;
-		line.picId = 0;
+//		line.picId = 0;
 	} else if (before) {
 		row = curRow;
-		if (row > 0) {
-			line.picId = curPage->text[curRow-1].picId;
-		} else {
-			line.picId = 0;
-		}
+//		if (row > 0) {
+//			line.picId = curPage->text[curRow-1].picId;
+//		} else {
+//			line.picId = 0;
+//		}
 	} else {
 		row = curRow + 1;
-		line.picId = curPage->text[curRow].picId;
+//		line.picId = curPage->text[curRow].picId;
 	}
 	curPage->text.insert(row,line);
 	model->insertRow(row);
@@ -972,7 +979,7 @@ void MWindow::changePage() {
 			disableTab();
 		} else {
 			curItem = itm;
-			QUuid id(itm->data(0,Qt::UserRole).toByteArray());
+			QUuid id(itm->data(0, roleId).toByteArray());
 			if (id != 0) {
 				if (!curPage || (curPage->id != id)) {
 					setPage(id);
@@ -1032,11 +1039,11 @@ void MWindow::changeRow(QItemSelection) {
 			}
 			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
 			ui.labInfo->setText(QString("%0 / %1").arg(curRow).arg(curPage->text.size()));
-			ui.labUuid->setText(curPage->text[curRow].picId.toString());
+//			ui.labUuid->setText(curPage->text[curRow].picId.toString());
 		} else {
 			setEdit(false);
 			ui.labInfo->clear();
-			ui.labUuid->clear();
+//			ui.labUuid->clear();
 		}
 	}
 }
@@ -1739,7 +1746,7 @@ QTreeWidgetItem* MWindow::getCurrentParent() {
 	QTreeWidgetItem* par = (rws.size() == 1) ? ui.tree->currentItem() : nullptr;
 	QUuid id;
 	if (par) {
-		id = QUuid(par->data(0,Qt::UserRole).toByteArray());
+		id = QUuid(par->data(0, roleId).toByteArray());
 		if (!id.isNull())
 			par = par->parent();
 	}
@@ -1766,7 +1773,7 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	QString tip;
 	QIcon ico;
 	QTreeWidgetItem* itm = new QTreeWidgetItem();
-	itm->setData(0,Qt::UserRole,id.toByteArray());
+	itm->setData(0, roleId, id.toByteArray());
 	if (nam == "") {
 		nam = id.toString();
 	}
@@ -1794,6 +1801,23 @@ QTreeWidgetItem* MWindow::addItem(QTreeWidgetItem* par, QString nam, QUuid id, Q
 	}
 	changed = 1;
 	return itm;
+}
+
+// images
+
+void MWindow::setImgDir() {
+	if (curItem == nullptr) return;
+	QString imgdir = curItem->data(0, roleImgDir).toString();
+	QString path = QFileDialog::getExistingDirectory(this, "Select images directory", imgdir, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseNativeDialog);
+	if (path.isEmpty()) return;
+	curItem->setData(0, roleImgDir, path);
+//	curPage->imgdir = path;
+	changed = 1;
+}
+
+void MWindow::rmImgDir() {
+	if (curItem == nullptr) return;
+	curItem->setData(0, roleImgDir, "");
 }
 
 void MWindow::imgWork() {
@@ -1834,20 +1858,48 @@ void MWindow::imgDelete() {
 
 // player
 
-void MWindow::play() {
-	if (curPage == nullptr) return;
-	int row = curPage->curRow;
-	if (row < 0) return;
+void fillImages(TPage* pg, QString imgdir) {
+	if (pg == nullptr) return;
+	QString img;
+	int cnt = pg->text.size();
+	int i;
+	for (i = 0; i < cnt; i++) {
+		if (imgdir.isEmpty()) {
+			pg->text[i].imgpath.clear();
+		} else if (pg->text[i].src.text.startsWith("[BG:")) {
+			img = pg->text[i].src.text.mid(4);
+			img.remove("]");
+			img.prepend("/");
+			img.prepend(imgdir);
+			if (QFile::exists(img)) {
+				pg->text[i].imgpath = img;
+			} else if (QFile::exists(img + ".jpg")) {
+				img += ".jpg";
+				pg->text[i].imgpath = img;
+			} else if (QFile::exists(img + ".png")) {
+				img += ".png";
+				pg->text[i].imgpath = img;
+			} else if (QFile::exists(img + ".bmp")) {
+				img += ".bmp";
+				pg->text[i].imgpath = img;
+			} else {
+				img.clear();
+				pg->text[i].imgpath = img;
+			}
+		} else {
+			pg->text[i].imgpath = img;
+		}
+	}
+}
 
-	QUuid picid = curPage->text[row].picId;
+void showFrame(TLine lin, xPlayer* plr) {
 	QPixmap pxm(1280,720);
-	if (curPage->imgs.contains(picid)) {
-		pxm = QPixmap::fromImage(curPage->imgs[picid].img).scaled(1280,720);
+	if (QFile::exists(lin.imgpath)) {
+		pxm.load(lin.imgpath);
 	} else {
 		pxm.fill(Qt::black);
 	}
 	QString txt;
-	TLine lin = curPage->text.at(row);
 	int flag = 0;
 	if (lin.trn.text.isEmpty()) {
 		txt = lin.src.text;
@@ -1861,10 +1913,10 @@ void MWindow::play() {
 	QPainter pnt(&pxm);
 	pnt.setFont(fnt);
 	pnt.setPen(Qt::white);
-	pnt.fillRect(0, 520, 1280, 200, QBrush(QColor(90,90,90,120)));
+	pnt.fillRect(0, 520, 1280, 200, QBrush(QColor(1,1,1,200)));
 	pnt.drawText(10,530, 1260, 180, flag, txt);
 	if (!lin.src.name.isEmpty()) {
-		pnt.fillRect(5,480,640,38,QBrush(QColor(90,90,90,120)));
+		pnt.fillRect(0,480,640,38,QBrush(QColor(1,1,1,200)));
 		if (lin.trn.name.isEmpty()) {
 			pnt.drawText(10,482,630,34,0,lin.src.name);
 		} else {
@@ -1872,22 +1924,53 @@ void MWindow::play() {
 		}
 	}
 	pnt.end();
+	plr->setPixmap(pxm);
+}
 
-	player->setPixmap(pxm);
-
-	// draw frame for current row on player
-	// click on player = draw next line
-
+void MWindow::play() {
+	if (curItem == nullptr) return;
+	if (curPage == nullptr) return;
+	int row = curPage->curRow;
+	if (row < 0) return;
+	QTreeWidgetItem* itm = curItem;
+	QString imgdir;
+	do {
+		imgdir = itm->data(0, roleImgDir).toString();
+		if (imgdir.isEmpty())
+			itm = itm->parent();
+	} while (imgdir.isEmpty() && (itm != nullptr));
+	fillImages(curPage, imgdir);
+	showFrame(curPage->text[row], player);
 	player->show();
 }
 
 void MWindow::playNext() {
 	lineDown();
-	play();
+	showFrame(curPage->text[curPage->curRow], player);
+}
+
+void MWindow::playPrev() {
+	lineUp();
+	showFrame(curPage->text[curPage->curRow], player);
 }
 
 void xPlayer::mousePressEvent(QMouseEvent *ev) {
 	if (ev->button() == Qt::LeftButton) {
 		emit clicked();
+	}
+}
+
+void xPlayer::wheelEvent(QWheelEvent* ev) {
+	if (ev->angleDelta().y() < 0) {
+		emit clicked();
+	} else if (ev->angleDelta().y() > 0) {
+		emit clicked_r();
+	}
+}
+
+void xPlayer::keyPressEvent(QKeyEvent *ev) {
+	switch(ev->key()) {
+		case Qt::Key_Return: emit clicked(); break;
+		case Qt::Key_Escape: close(); break;
 	}
 }

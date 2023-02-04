@@ -45,7 +45,7 @@ QTreeWidgetItem* TRBLoader::add_item(QTreeWidgetItem* par, QString name, QUuid i
 	QString tip;
 	QIcon ico;
 	QTreeWidgetItem* itm = new QTreeWidgetItem();
-	itm->setData(0,Qt::UserRole,id.toByteArray());
+	itm->setData(0, roleId, id.toByteArray());
 	if (name == "") {
 		name = id.toString();
 	}
@@ -130,6 +130,7 @@ int TRBLoader::v7_load_page() {
 	TLine lin;
 	TImage img;
 	TBookmark bm;
+	QString tmpstr;
 	QUuid id;
 	strm >> type;
 	while (type != T7_END) {
@@ -142,6 +143,9 @@ int TRBLoader::v7_load_page() {
 				break;
 			case TP_CURL:
 				strm >> page.curRow;
+				break;
+			case TP_DIR:
+				strm >> tmpstr;
 				break;
 			case TP_IMG:
 				do {
@@ -220,10 +224,12 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 	int err = 0;
 	int type;
 	QTreeWidgetItem* par = root;
+	QTreeWidgetItem* itm;
 	QUuid id;
 	QUuid iconid;
 	QIcon icon;
 	QString name;
+	QString imgdir;
 	strm >> type;
 	while (type != T7_END) {
 		switch (type) {
@@ -240,6 +246,9 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 						case TT_ICONID:
 							strm >> iconid;
 							break;
+						case TT_IMG:
+							strm >> imgdir;
+							break;
 						default:
 							idError(TT_DIR, type);
 							err = 1;
@@ -250,6 +259,8 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 				}
 				if (err) break;
 				par = add_item(par,name,0,iconid);
+				par->setData(0, roleImgDir, imgdir);
+				imgdir.clear();
 				iconid = 0;
 				break;
 			case TT_PAGE:
@@ -265,6 +276,9 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 						case TT_ICON:
 							strm >> icon;
 							break;
+						case TT_IMG:
+							strm >> imgdir;
+							break;
 						default:
 							idError(TT_PAGE, type);
 							err = 1;
@@ -274,7 +288,9 @@ int TRBLoader:: v7_load_tree(QTreeWidgetItem* root) {
 					strm >> type;
 				}
 				if (err) break;
-				add_item(par, name, id);
+				itm = add_item(par, name, id);
+				itm->setData(0, roleImgDir, imgdir);
+				imgdir.clear();
 				break;
 			case TT_END:
 				par = par->parent();
@@ -389,12 +405,14 @@ void TRBLoader::v7_save_leaf(QTreeWidgetItem* par) {
 			strm << TT_DIR;
 			strm << TT_NAME << itm->text(0);
 			strm << TT_ICONID << QUuid(itm->data(0,roleIcon).toByteArray());
+			strm << TT_IMG << itm->data(0, roleImgDir).toString();
 			strm << TT_END;
 			v7_save_leaf(itm);
 		} else {
 			strm << TT_PAGE;
 			strm << TT_NAME << itm->text(0);
 			strm << TT_UUID << id;
+			strm << TT_IMG << itm->data(0, roleImgDir).toString();
 			strm << TT_END;
 		}
 	}
@@ -441,6 +459,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 			strm << TP_UUID << pg->id;
 			strm << TP_FLAG << pg->flag;
 			strm << TP_CURL << pg->curRow;
+//			strm << TP_DIR << pg->imgdir;
 			foreach(line, pg->text) {
 				strm << TP_LINE;
 				strm << TL_TYPE << line.type;
@@ -453,6 +472,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 				strm << TL_TT << line.trn.text;
 				strm << T7_END;
 			}
+			/*
 			foreach(id, pg->imgs.keys()) {
 				img = pg->imgs[id];
 				strm << TP_IMG;
@@ -461,6 +481,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 				strm << TI_ICO << img.img;
 				strm << TI_END;
 			}
+			*/
 			strm << T7_END;
 		}
 	}

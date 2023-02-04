@@ -62,6 +62,7 @@ enum {
 #define TP_UUID	0x43		// page uuid
 #define TP_IMG	0x44		// image id
 #define TP_CURL	0x45		// current line (int)
+#define TP_DIR	0x46		// images dir
 
 #define	TP_LINE	0x03
 #define	TL_SN	0x84		// src name
@@ -80,6 +81,7 @@ enum {
 #define TT_ICONID 0x4a		// icon uuid
 #define	TT_PID	0x4B		// assotiated page id (int)
 #define	TT_UUID	0x4C		// ...or uuid
+#define TT_IMG	0x4D		// images dir
 #define	TT_END	0x0D		// end of current dir list
 
 struct TPhrase {
@@ -92,6 +94,7 @@ struct TLine {
 	int flag = 0;
 	QUuid bmrkId;
 	QUuid picId;
+	QString imgpath;
 	TPhrase src;
 	TPhrase trn;
 };
@@ -112,8 +115,8 @@ struct TPage {
 	int flag;
 	int curRow;
 	QString name;
+//	QString imgdir;
 	QMap<QUuid,TImage> imgs;
-//	QList<TImage> imgs;
 	QList<TLine> text;
 };
 
@@ -150,10 +153,6 @@ void rmBookmark(QUuid);
 QList<TBookmark>* get_bmlist_ptr();
 
 extern QList<TBookmark> bookmarks;
-
-//TImage* findImage(QUuid id);
-//TImage* addImage(TImage);
-//extern QList<TImage> images;
 
 void getCounts(TPage*,int&,int&);
 int getProgress(TPage*);

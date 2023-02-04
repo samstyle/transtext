@@ -17,6 +17,7 @@ extern TPage* curPage;
 enum {
 	roleId = Qt::UserRole,
 	roleIcon,
+	roleImgDir
 };
 
 class TRBLoader {
@@ -50,8 +51,11 @@ class xPlayer : public QLabel {
 		xPlayer() {}
 	signals:
 		void clicked();
+		void clicked_r();
 	protected:
 		void mousePressEvent(QMouseEvent*);
+		void wheelEvent(QWheelEvent*);
+		void keyPressEvent(QKeyEvent*);
 };
 
 class MWindow : public QMainWindow {
@@ -87,7 +91,7 @@ class MWindow : public QMainWindow {
 		QMenu* tbMenu;
 		QMenu* sjMenu;
 		QMenu* bmMenu;
-		QMenu* imMenu;
+//		QMenu* imMenu;
 		QMenu* treeMenu;
 
 		void fillBlock(const QList<TLine>*);
@@ -119,6 +123,7 @@ class MWindow : public QMainWindow {
 
 		void play();
 		void playNext();
+		void playPrev();
 
 		void findStr(QString);
 		void findNext();
@@ -134,10 +139,12 @@ class MWindow : public QMainWindow {
 
 		void pageInfo();
 		void bmList();
-		void imgWork();
 		void goToBookmark(const QModelIndex&);
 		void treeItemChanged(QTreeWidgetItem*);
 
+		void setImgDir();
+		void rmImgDir();
+		void imgWork();
 		void imgSelect();
 		void imgSelected(QUuid);
 		void imgDelete();

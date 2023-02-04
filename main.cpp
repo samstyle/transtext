@@ -230,7 +230,7 @@ void rmBookmark(QUuid id) {
 
 // abelsoft scripts
 
-TPage loadAbelsoft(QString fnam, int cpage) {
+TPage loadAbelsoft(QString fnam, int) {
 	TPage page;
 	QFile file(fnam);
 	QString line;
@@ -251,17 +251,17 @@ TPage loadAbelsoft(QString fnam, int cpage) {
 			if (idx > -1) line = line.left(idx);
 			if (!line.isEmpty()) {
 				if (line.startsWith("<")) {
-					taglist = line.split(QRegExp("[<>]"),QString::SkipEmptyParts);
+					taglist = line.split(QRegExp("[<>]"),Qt::SkipEmptyParts);
 					for (idx = 0; idx < taglist.size(); idx++) {
-						arglist = taglist.at(idx).split(" ",QString::SkipEmptyParts);
+						arglist = taglist.at(idx).split(" ",Qt::SkipEmptyParts);
 						if (arglist.first() == "WINDOW") {
 							for (i = 1; i < arglist.size(); i++) {
-								argvals = arglist.at(i).split("=",QString::SkipEmptyParts);
+								argvals = arglist.at(i).split("=",Qt::SkipEmptyParts);
 								if (argvals.first() == "NAME") name = argvals.last().remove("\"");
 							}
 						} else if (arglist.first() == "IMG") {
 							for (i = 1; i < arglist.size(); i++) {
-								argvals = arglist.at(i).split("=",QString::SkipEmptyParts);
+								argvals = arglist.at(i).split("=",Qt::SkipEmptyParts);
 								if (argvals.first() == "SRC") {
 									tlin.src.name.clear();
 									tlin.src.text.clear();
@@ -324,7 +324,7 @@ TPage loadPage(QString fnam, int type) {
 
 //			if (line != "") {
 				if (line.startsWith("@")) {
-					com = line.split(":",QString::KeepEmptyParts);
+					com = line.split(":",Qt::KeepEmptyParts);
 					while (com.size() < 5) com.append("");
 
 					// @S:id:name		selection
