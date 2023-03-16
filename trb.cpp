@@ -448,7 +448,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 	TPage* pg;
 	TLine line;
 	TBookmark* bm;
-	TImage img;
+//	TImage img;
 // pages
 //	qDebug() << "begin (pages): " << buf.pos();
 	idlist = getTreeIds(par);

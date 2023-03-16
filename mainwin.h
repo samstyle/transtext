@@ -47,11 +47,13 @@ class TRBLoader {
 class xPlayer : public QLabel {
 	Q_OBJECT
 	public:
-		xPlayer() {}
+		xPlayer(QWidget* = nullptr);
+		void playLine(TLine);
+		QFont fnt;
 	signals:
 		void clicked();
 		void clicked_r();
-	protected:
+	private:
 		void mousePressEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);
@@ -105,6 +107,7 @@ class MWindow : public QMainWindow {
 
 		void saveLeaf(QTreeWidgetItem*,QBuffer*);
 
+		QString getImgDir(QTreeWidgetItem*);
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
 		int selectItemByPageID(QUuid);
@@ -122,6 +125,7 @@ class MWindow : public QMainWindow {
 		void play();
 		void playNext();
 		void playPrev();
+		void fontSelect();
 
 		void findStr(QString);
 		void findNext();

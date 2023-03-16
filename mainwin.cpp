@@ -1,5 +1,6 @@
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QFontDialog>
 
 #include <string.h>
 
@@ -54,7 +55,7 @@ MWindow::MWindow() {
 	connect(ui.actOpenSrc,SIGNAL(triggered()),this,SLOT(openSrc()));
 	connect(ui.actInsertSrc,SIGNAL(triggered()),this,SLOT(insertSrc()));
 	connect(ui.actSaveSrc,SIGNAL(triggered()),this,SLOT(saveSrc()));
-//	connect(ui.actImages,SIGNAL(triggered()),this,SLOT(imgWork()));
+	connect(ui.actPlayerFont,SIGNAL(triggered()),this,SLOT(fontSelect()));
 
 	connect(ui.actSplitLine,SIGNAL(triggered()),this,SLOT(splitLine()));
 	connect(ui.actSplitName,SIGNAL(triggered()),this,SLOT(splitName()));
@@ -86,7 +87,7 @@ MWindow::MWindow() {
 	treeMenu->addAction(ui.actSort);
 	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actSetImgDir);
-	treeMenu->addAction(ui.actRmImgDir);
+	treeMenu->addAction(ui.actRmImgDir); ui.actRmImgDir->setVisible(false);
 	treeMenu->addSeparator();
 	treeMenu->addAction(ui.actMerge);
 	treeMenu->addSeparator();
@@ -130,12 +131,9 @@ MWindow::MWindow() {
 	connect(ui.actFindUntrn,SIGNAL(triggered()),this,SLOT(findUntrn()));
 
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
-	connect(ui.actPicture, SIGNAL(triggered()), this, SLOT(imgSelect()));
-	connect(ui.actDelPicture, SIGNAL(triggered()), this, SLOT(imgDelete()));
 
 	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
 	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(setImgDir()));
-//	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(imgWork()));
 	connect(ui.tbBookmark,SIGNAL(released()),this,SLOT(bmList()));
 
 	icowin = new QDialog(this);
@@ -156,7 +154,6 @@ MWindow::MWindow() {
 	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
 
 	player = new xPlayer();
-	player->setFixedSize(1280, 720);
 	connect(player, SIGNAL(clicked()), this, SLOT(playNext()));
 	connect(player, SIGNAL(clicked_r()), this, SLOT(playPrev()));
 }
@@ -284,6 +281,8 @@ void MWindow::fillSJMenu() {
 			sjMenu->addAction(txt)->setData(i);
 		}
 	}
+	QString imgdir = getImgDir(curItem);
+	ui.actRmImgDir->setVisible(!imgdir.isEmpty());
 }
 
 void MWindow::appendCbrd() {
@@ -997,6 +996,7 @@ void MWindow::changePage() {
 		curRow = curPage->curRow;
 		if (curRow > -1) {
 			ui.table->selectRow(curRow);
+			ui.table->scrollTo(ui.table->model()->index(curRow, 0));
 		}
 	}
 	ui.widFind->hide();
@@ -1808,6 +1808,7 @@ void MWindow::setImgDir() {
 	QString path = QFileDialog::getExistingDirectory(this, "Select images directory", imgdir, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseNativeDialog);
 	if (path.isEmpty()) return;
 	curItem->setData(0, roleImgDir, path);
+	ui.actRmImgDir->setVisible(true);
 //	curPage->imgdir = path;
 	changed = 1;
 }
@@ -1815,9 +1816,20 @@ void MWindow::setImgDir() {
 void MWindow::rmImgDir() {
 	if (curItem == nullptr) return;
 	curItem->setData(0, roleImgDir, "");
+	ui.actRmImgDir->setVisible(false);
 }
 
 // player
+
+QString fExists(QString imgdir, QString str) {
+	if (QFile::exists(imgdir + str)) return imgdir + str;
+	str = str.toLower();
+	if (QFile::exists(imgdir + str)) return imgdir + str;
+	str = str.toUpper();
+	if (QFile::exists(imgdir + str)) return imgdir + str;
+	str.clear();
+	return str;
+}
 
 void fillImages(TPage* pg, QString imgdir) {
 	if (pg == nullptr) return;
@@ -1825,70 +1837,43 @@ void fillImages(TPage* pg, QString imgdir) {
 	int cnt = pg->text.size();
 	int i;
 	QString txt;
+	QString ximg;
 	for (i = 0; i < cnt; i++) {
 		txt = pg->text[i].src.text;
 		txt.remove(" ");
 		if (imgdir.isEmpty()) {
 			pg->text[i].imgpath.clear();
-		} else if (txt.startsWith("[BG:")) {
-			img = txt.mid(4);
+		} else if (txt.startsWith("[")) {
+			if (txt.startsWith("[BG:")) {
+				img = txt.mid(4);
+			} else if (txt.startsWith("[BGX:")) {
+				img = txt.mid(5);
+			} else {
+				img = txt.mid(1);
+			}
 			img.remove("]");
 			img.prepend("/");
-			img.prepend(imgdir);
-			if (QFile::exists(img)) {
-				pg->text[i].imgpath = img;
-			} else if (QFile::exists(img + ".jpg")) {
-				img += ".jpg";
-				pg->text[i].imgpath = img;
-			} else if (QFile::exists(img + ".png")) {
-				img += ".png";
-				pg->text[i].imgpath = img;
-			} else if (QFile::exists(img + ".bmp")) {
-				img += ".bmp";
-				pg->text[i].imgpath = img;
-			} else {
-				img.clear();
-				pg->text[i].imgpath = img;
-			}
+			// img.prepend(imgdir);
+			ximg = fExists(imgdir, img);
+			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".jpg");
+			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".png");
+			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".bmp");
+			img = ximg;
+			pg->text[i].imgpath = img;
 		} else {
 			pg->text[i].imgpath = img;
 		}
 	}
 }
 
-void showFrame(TLine lin, xPlayer* plr) {
-	QPixmap pxm(1280,720);
-	if (QFile::exists(lin.imgpath)) {
-		pxm.load(lin.imgpath);
-	} else {
-		pxm.fill(Qt::black);
-	}
-	QString txt;
-	int flag = 0;
-	if (lin.trn.text.isEmpty()) {
-		txt = lin.src.text;
-		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
-	} else {
-		txt = lin.trn.text;
-		flag = Qt::TextWordWrap;
-	}
-	QFont fnt;
-	fnt.setPixelSize(32);
-	QPainter pnt(&pxm);
-	pnt.setFont(fnt);
-	pnt.setPen(Qt::white);
-	pnt.fillRect(0, 520, 1280, 200, QBrush(QColor(1,1,1,200)));
-	pnt.drawText(10,530, 1260, 180, flag, txt);
-	if (!lin.src.name.isEmpty()) {
-		pnt.fillRect(0,480,640,38,QBrush(QColor(1,1,1,200)));
-		if (lin.trn.name.isEmpty()) {
-			pnt.drawText(10,482,630,34,0,lin.src.name);
-		} else {
-			pnt.drawText(10,482,630,34,0,lin.trn.name);
-		}
-	}
-	pnt.end();
-	plr->setPixmap(pxm);
+QString MWindow::getImgDir(QTreeWidgetItem* itm) {
+	QString imgdir;
+	do {
+		imgdir = itm->data(0, roleImgDir).toString();
+		if (imgdir.isEmpty())
+			itm = itm->parent();
+	} while (imgdir.isEmpty() && (itm != nullptr));
+	return imgdir;
 }
 
 void MWindow::play() {
@@ -1898,24 +1883,95 @@ void MWindow::play() {
 	if (row < 0) return;
 	QTreeWidgetItem* itm = curItem;
 	QString imgdir;
-	do {
-		imgdir = itm->data(0, roleImgDir).toString();
-		if (imgdir.isEmpty())
-			itm = itm->parent();
-	} while (imgdir.isEmpty() && (itm != nullptr));
+	QString nam;
+	while (itm != nullptr) {
+		if (!nam.isEmpty()) nam.prepend("/");
+		nam.prepend(itm->text(0));
+		itm = itm->parent();
+	}
+	player->setWindowTitle(nam);
+
+	imgdir = getImgDir(curItem);
+
+//	itm = curItem;
+
 	fillImages(curPage, imgdir);
-	showFrame(curPage->text[row], player);
+	player->playLine(curPage->text[row]);
 	player->show();
 }
 
 void MWindow::playNext() {
-	lineDown();
-	showFrame(curPage->text[curPage->curRow], player);
+	TLine lin;
+	do {
+		lineDown();
+		lin = curPage->text[curRow];
+	} while ((curRow < (curPage->text.size() - 1)) && (lin.src.text.isEmpty() || lin.src.text.startsWith("[")));
+	player->playLine(lin);
 }
 
 void MWindow::playPrev() {
-	lineUp();
-	showFrame(curPage->text[curPage->curRow], player);
+	TLine lin;
+	do {
+		lineUp();
+		lin = curPage->text[curRow];
+	} while ((curRow > 0) && (lin.src.text.isEmpty() || lin.src.text.startsWith("[")));
+	player->playLine(lin);
+}
+
+void MWindow::fontSelect() {
+	bool f;
+	QFont fnt = QFontDialog::getFont(&f, player->fnt, this);
+	if (f) {
+		player->fnt = fnt;
+	}
+}
+
+xPlayer::xPlayer(QWidget* p):QLabel(p) {
+	setWindowModality(Qt::ApplicationModal);
+	fnt.setPixelSize(32);
+	fnt.setFamily("Buxton Sketch");
+	setFixedSize(1280,720);
+}
+
+void xPlayer::playLine(TLine lin) {
+	QPixmap pxm(size().width(),size().height());
+	if (QFile::exists(lin.imgpath)) {
+		pxm.load(lin.imgpath);
+		pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
+	} else {
+		pxm.fill(Qt::black);
+	}
+	int w = pxm.width();
+	int h = pxm.height();
+	setFixedSize(w, h);
+	QString txt;
+	int flag = 0;
+	if (lin.trn.text.isEmpty()) {
+		txt = lin.src.text;
+		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
+	} else {
+		txt = lin.trn.text;
+		flag = Qt::TextWordWrap;
+	}
+	QPainter pnt(&pxm);
+	pnt.setFont(fnt);
+	pnt.setPen(Qt::white);
+	QRect rct(0, h-200, w, 200);
+	QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
+	grd.setColorAt(0, QColor(0,0,0,200));
+	grd.setColorAt(1, QColor(0,0,0,120));
+	pnt.fillRect(rct, grd);
+	pnt.drawText(10,h-190, w-20, 180, flag, txt);
+	if (!lin.src.name.isEmpty()) {
+		pnt.fillRect(0,h-240,300,38,QBrush(QColor(1,1,1,200)));
+		if (lin.trn.name.isEmpty()) {
+			pnt.drawText(10,h-238,290,34,0,lin.src.name);
+		} else {
+			pnt.drawText(10,h-238,290,34,0,lin.trn.name);
+		}
+	}
+	pnt.end();
+	setPixmap(pxm);
 }
 
 void xPlayer::mousePressEvent(QMouseEvent *ev) {

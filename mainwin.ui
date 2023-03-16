@@ -254,6 +254,7 @@
     </property>
     <addaction name="actGrabCbrd"/>
     <addaction name="actBookmarks"/>
+    <addaction name="actPlayerFont"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPage"/>
@@ -505,6 +506,11 @@
    </property>
    <property name="text">
     <string>Remove Images Dir</string>
+   </property>
+  </action>
+  <action name="actPlayerFont">
+   <property name="text">
+    <string>Player font...</string>
    </property>
   </action>
  </widget>
