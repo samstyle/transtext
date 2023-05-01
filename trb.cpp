@@ -132,6 +132,8 @@ int TRBLoader::v7_load_page() {
 	TBookmark bm;
 	QString tmpstr;
 	QUuid id;
+	QUuid tmpid;
+	bool issel = false;
 	strm >> type;
 	while (type != T7_END) {
 		switch(type) {
@@ -173,7 +175,7 @@ int TRBLoader::v7_load_page() {
 				lin.type = TL_TEXT;
 				lin.flag = 0;
 				lin.bmrkId = QUuid();
-				lin.picId = QUuid();
+				// lin.picId = QUuid();
 				lin.src.name.clear();
 				lin.src.text.clear();
 				lin.trn.name.clear();
@@ -188,7 +190,7 @@ int TRBLoader::v7_load_page() {
 						case TL_TYPE: strm >> lin.type; break;
 						case TL_FLAG: strm >> lin.flag; break;
 						case TL_BMID: strm >> lin.bmrkId; break;
-						case TL_PIC: strm >> lin.picId; break;
+						case TL_PIC: strm >> tmpid; break;
 						default:
 							idError(TP_LINE, type);
 							err = 1;
@@ -206,7 +208,19 @@ int TRBLoader::v7_load_page() {
 					}
 					lin.src.text.remove(QObject::trUtf8("　"));
 					normLine(lin);
-					page.text.append(lin);
+					if ((lin.type == TL_TEXT) && (lin.src.text.toLower() == "[select]")) {
+						issel = true;
+					} else if (issel) {
+						if (lin.src.text.isEmpty()) {
+							issel = false;
+							lin.type = TL_TEXT;
+						} else {
+							lin.type = TL_SELECT;
+						}
+						page.text.append(lin);
+					} else {
+						page.text.append(lin);
+					}
 				}
 				break;
 			default:
@@ -465,7 +479,7 @@ int TRBLoader::v7_save(QTreeWidgetItem* par) {
 				strm << TL_TYPE << line.type;
 				strm << TL_FLAG << line.flag;
 				strm << TL_BMID << line.bmrkId;
-				strm << TL_PIC << line.picId;
+				// strm << TL_PIC << line.picId;
 				strm << TL_SN << line.src.name;
 				strm << TL_ST << line.src.text;
 				strm << TL_TN << line.trn.name;

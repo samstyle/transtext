@@ -513,6 +513,15 @@
     <string>Player font...</string>
    </property>
   </action>
+  <action name="actInsertBG">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/picture.png</normaloff>:/picture.png</iconset>
+   </property>
+   <property name="text">
+    <string>Insert pic...</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>srcname</tabstop>

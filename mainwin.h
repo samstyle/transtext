@@ -2,6 +2,8 @@
 
 #include <QtGui>
 #include <QFileDialog>
+#include <QFileSystemModel>
+#include <QTreeView>
 
 #include "ui_mainwin.h"
 #include "ui_iconwindow.h"
@@ -44,16 +46,33 @@ class TRBLoader {
 		void v7_save_leaf(QTreeWidgetItem*);
 };
 
+class xFileTreeWidget : public QWidget {
+	Q_OBJECT
+	public:
+		xFileTreeWidget(QWidget* = nullptr);
+		void setDir(QString);
+	signals:
+		void s_selected(QString);
+	private:
+		QTreeView* tree;
+		QLabel* view;
+		QFileSystemModel* model;
+	private slots:
+		void itemClick(const QModelIndex&, const QModelIndex&);
+		void itemChosed(const QModelIndex&);
+};
+
 class xPlayer : public QLabel {
 	Q_OBJECT
 	public:
 		xPlayer(QWidget* = nullptr);
-		void playLine(TLine);
+		bool playLine(TLine);
 		QFont fnt;
 	signals:
 		void clicked();
 		void clicked_r();
 	private:
+		int cnt;
 		void mousePressEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);
@@ -78,6 +97,7 @@ class MWindow : public QMainWindow {
 		QDialog* bmwin;
 		xPlayer* player;
 		QFileDialog fdial;
+		xFileTreeWidget* ftw;
 
 		QDialog* blwin;
 		BMLModel* blmod;
@@ -105,7 +125,7 @@ class MWindow : public QMainWindow {
 		void lineUp();
 		void lineDown();
 
-		void saveLeaf(QTreeWidgetItem*,QBuffer*);
+//		void saveLeaf(QTreeWidgetItem*,QBuffer*);
 
 		QString getImgDir(QTreeWidgetItem*);
 		int getCurrentRow();
@@ -123,7 +143,8 @@ class MWindow : public QMainWindow {
 		void findUntrn();
 
 		void play();
-		void playNext();
+		void playLine();
+		bool playNext();
 		void playPrev();
 		void fontSelect();
 
@@ -174,6 +195,9 @@ class MWindow : public QMainWindow {
 		void askRmBookmark();
 		void newBookmark();
 		void fillSJMenu();
+
+		void insertImgLine();
+		void insertImgText(QString);
 
 		void newPrj();
 		void mergePrj(QString path = "");

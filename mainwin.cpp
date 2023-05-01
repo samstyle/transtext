@@ -1,6 +1,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QHBoxLayout>
 
 #include <string.h>
 
@@ -36,6 +37,10 @@ MWindow::MWindow() {
 	tab->setSelectionBehavior(QTableWidget::SelectRows);
 	tab->verticalHeader()->setDefaultSectionSize(17);
 	tab->verticalHeader()->setVisible(false);
+
+	ftw = new xFileTreeWidget();
+	ftw->setDir("/");
+	connect(ftw, &xFileTreeWidget::s_selected, this, &MWindow::insertImgText);
 
 	ui.widFind->hide();
 
@@ -106,14 +111,12 @@ MWindow::MWindow() {
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Labels");
 	bmMenu = tbMenu->addMenu(QIcon(":/bookmark.png"),"Bookmarks");
-	// imMenu = tbMenu->addMenu("Pictures");
-	// imMenu->addAction(ui.actPicture);
-	// imMenu->addAction(ui.actDelPicture);
 	tbMenu->addAction(ui.actFindUntrn);
 	tbMenu->addAction(ui.actSplitName);
 	tbMenu->addAction(ui.actJoinLine);
-	tbMenu->addSeparator();
 	tbMenu->addAction(ui.actSplit);
+	tbMenu->addSeparator();
+	tbMenu->addAction(ui.actInsertBG);
 	tbMenu->addSeparator();
 	tbMenu->addAction(ui.actDelRows);
 	tbMenu->addAction(ui.actClearTrn);
@@ -125,6 +128,7 @@ MWindow::MWindow() {
 	connect(ui.actAddBookmark,SIGNAL(triggered()),this,SLOT(askBookmark()));
 	connect(ui.actRmBookmark,SIGNAL(triggered()),this,SLOT(askRmBookmark()));
 	connect(ui.actJoinLine,SIGNAL(triggered()),this,SLOT(joinLine()));
+	connect(ui.actInsertBG,SIGNAL(triggered()),this,SLOT(insertImgLine()));
 
 	connect(ui.actSplit,SIGNAL(triggered()),this,SLOT(pageSplit()));
 	connect(ui.actDelRows,SIGNAL(triggered()),this,SLOT(rowDelete()));
@@ -234,55 +238,59 @@ void MWindow::jumpLine(QAction *act) {
 }
 
 void MWindow::fillSJMenu() {
-	if (!curPage) return;
+	if (curPage) {
 
-	sjMenu->clear();
-	bmMenu->clear();
+		sjMenu->clear();
+		bmMenu->clear();
 
-	bmMenu->addAction(ui.actAddBookmark);
-	bmMenu->addAction(ui.actRmBookmark);
-	bmMenu->addSeparator();
+		bmMenu->addAction(ui.actAddBookmark);
+		bmMenu->addAction(ui.actRmBookmark);
+		bmMenu->addSeparator();
 
-	QString txt;
-	TLine* line;
-	TBookmark* bm;
-	int i;
-	if ((curRow < 0) || (curRow >= curPage->text.size())) {
-		ui.actAddBookmark->setEnabled(false);
-		ui.actRmBookmark->setEnabled(false);
-	} else {
-		ui.actAddBookmark->setEnabled(true);
-		ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
-	}
-	for (i = 0; i < curPage->text.size(); i++) {
-		line = &curPage->text[i];
-
-		if (!line->bmrkId.isNull()) {
-			bm = findBookmark(line->bmrkId);
-			if (bm != nullptr) {
-				bmMenu->addAction(bm->name)->setData(i);
-			}
+		QString txt;
+		TLine* line;
+		TBookmark* bm;
+		int i;
+		if ((curRow < 0) || (curRow >= curPage->text.size())) {
+			ui.actAddBookmark->setEnabled(false);
+			ui.actRmBookmark->setEnabled(false);
+		} else {
+			ui.actAddBookmark->setEnabled(true);
+			ui.actRmBookmark->setDisabled(curPage->text[curRow].bmrkId.isNull());
 		}
-		if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
-			if (line->trn.text.isEmpty()) {
-				txt = line->src.text;
-			} else {
-				txt = line->trn.text;
+		for (i = 0; i < curPage->text.size(); i++) {
+			line = &curPage->text[i];
+
+			if (!line->bmrkId.isNull()) {
+				bm = findBookmark(line->bmrkId);
+				if (bm != nullptr) {
+					bmMenu->addAction(bm->name)->setData(i);
+				}
 			}
-			txt.remove("==");
-			txt = txt.trimmed();
-			if (!txt.isEmpty()) {
+			if (line->src.text.startsWith("==") || line->trn.text.startsWith("==")) {
+				if (line->trn.text.isEmpty()) {
+					txt = line->src.text;
+				} else {
+					txt = line->trn.text;
+				}
+				txt.remove("==");
+				txt = txt.trimmed();
+				if (!txt.isEmpty()) {
+					txt.prepend(QString("%0 : ").arg(i));
+					sjMenu->addAction(txt)->setData(i);
+				}
+			} else if (line->src.text.startsWith("[")) {
+				txt = line->src.text;
 				txt.prepend(QString("%0 : ").arg(i));
 				sjMenu->addAction(txt)->setData(i);
 			}
-		} else if (line->src.text.startsWith("[")) {
-			txt = line->src.text;
-			txt.prepend(QString("%0 : ").arg(i));
-			sjMenu->addAction(txt)->setData(i);
 		}
+		QString imgdir = getImgDir(curItem);
+		ui.actRmImgDir->setVisible(!imgdir.isEmpty());
+		ui.actInsertBG->setVisible(!imgdir.isEmpty());
+//	} else {
+//		ui.actInsertBG->setVisible(false);
 	}
-	QString imgdir = getImgDir(curItem);
-	ui.actRmImgDir->setVisible(!imgdir.isEmpty());
 }
 
 void MWindow::appendCbrd() {
@@ -884,17 +892,10 @@ void MWindow::rowInsert(bool before) {
 	int row;
 	if (curRow < 0) {
 		row = 0;
-//		line.picId = 0;
 	} else if (before) {
 		row = curRow;
-//		if (row > 0) {
-//			line.picId = curPage->text[curRow-1].picId;
-//		} else {
-//			line.picId = 0;
-//		}
 	} else {
 		row = curRow + 1;
-//		line.picId = curPage->text[curRow].picId;
 	}
 	curPage->text.insert(row,line);
 	model->insertRow(row);
@@ -1049,9 +1050,12 @@ void MWindow::changeSrc(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
 	if (curPage->text[curRow].src.text == text) return;
+	QString oldtext = curPage->text[curRow].src.text;
 	curPage->text[curRow].src.text = text;
 	model->updateCell(curRow,2);
-	setProgress();
+	if (oldtext.isEmpty() ^ text.isEmpty()) {
+		setProgress();
+	}
 	changed = 1;
 }
 
@@ -1059,9 +1063,12 @@ void MWindow::changeTrn(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
 	if (curPage->text[curRow].trn.text == text) return;
+	QString oldtext = curPage->text[curRow].src.text;
 	curPage->text[curRow].trn.text = text;
 	model->updateCell(curRow,4);
-	setProgress();
+	if (oldtext.isEmpty() ^ text.isEmpty()) {
+		setProgress();
+	}
 	changed = 1;
 }
 
@@ -1819,6 +1826,71 @@ void MWindow::rmImgDir() {
 	ui.actRmImgDir->setVisible(false);
 }
 
+void MWindow::insertImgLine() {
+	if (curPage == nullptr) return;
+	QString imgdir = getImgDir(curItem);
+	if (imgdir.isEmpty()) return;
+	ftw->setDir(imgdir);
+	ftw->show();
+}
+
+void MWindow::insertImgText(QString rpath) {
+	TLine lin;
+	int pos = rpath.lastIndexOf(".");
+	if (pos > 0) rpath = rpath.left(pos);
+	lin.type = TL_TEXT;
+	lin.src.text = QString("[BG:%0]").arg(rpath);
+	curPage->text.insert(curRow, lin);
+	model->insertRow(curRow);
+	changed = 1;
+}
+
+// files tree
+
+xFileTreeWidget::xFileTreeWidget(QWidget* p):QWidget(p) {
+	QHBoxLayout* lay = new QHBoxLayout;
+	tree = new QTreeView;
+	view = new QLabel;
+	lay->addWidget(tree, 10);
+	lay->addWidget(view);
+	setLayout(lay);
+	model = new QFileSystemModel;
+	model->setNameFilters(QStringList() << "*.jpg" << "*.jpeg" << "*.png" << "*.bmp");
+	model->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
+	model->setNameFilterDisables(true);
+	model->setReadOnly(true);
+	tree->setModel(model);
+	tree->setColumnHidden(1, true);
+	tree->setColumnHidden(2, true);
+	tree->setColumnHidden(3, true);
+	tree->setMinimumWidth(400);
+	view->setMinimumWidth(400);
+	tree->setSelectionBehavior(QTreeView::SelectRows);
+	tree->setSelectionMode(QTreeView::SingleSelection);
+	tree->setHeaderHidden(true);
+	setWindowTitle("Select image file");
+
+	connect(tree->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &xFileTreeWidget::itemClick);
+	connect(tree, &QTreeView::doubleClicked, this, &xFileTreeWidget::itemChosed);
+}
+
+void xFileTreeWidget::setDir(QString dir) {
+	model->setRootPath(dir);
+	tree->setRootIndex(model->index(dir));
+}
+
+void xFileTreeWidget::itemClick(const QModelIndex& idx, const QModelIndex&) {
+	QFileInfo inf = model->fileInfo(idx);
+	view->setPixmap(QPixmap(inf.filePath()).scaled(400, 300));
+}
+
+void xFileTreeWidget::itemChosed(const QModelIndex& idx) {
+	QFileInfo inf = model->fileInfo(idx);
+	QString relpath = model->rootDirectory().relativeFilePath(inf.filePath());
+	emit s_selected(relpath);
+	close();
+}
+
 // player
 
 QString fExists(QString imgdir, QString str) {
@@ -1876,6 +1948,13 @@ QString MWindow::getImgDir(QTreeWidgetItem* itm) {
 	return imgdir;
 }
 
+void MWindow::playLine() {
+//	bool r = player->playLine(curPage->text[curRow]);
+//	while (r) {
+//		r = playNext();
+//	}
+}
+
 void MWindow::play() {
 	if (curItem == nullptr) return;
 	if (curPage == nullptr) return;
@@ -1896,17 +1975,17 @@ void MWindow::play() {
 //	itm = curItem;
 
 	fillImages(curPage, imgdir);
-	player->playLine(curPage->text[row]);
+	player->playLine(curPage->text[curRow]);
 	player->show();
 }
 
-void MWindow::playNext() {
+bool MWindow::playNext() {
 	TLine lin;
 	do {
 		lineDown();
 		lin = curPage->text[curRow];
 	} while ((curRow < (curPage->text.size() - 1)) && (lin.src.text.isEmpty() || lin.src.text.startsWith("[")));
-	player->playLine(lin);
+	return player->playLine(lin);
 }
 
 void MWindow::playPrev() {
@@ -1931,21 +2010,16 @@ xPlayer::xPlayer(QWidget* p):QLabel(p) {
 	fnt.setPixelSize(32);
 	fnt.setFamily("Buxton Sketch");
 	setFixedSize(1280,720);
+	cnt = 0;
 }
 
-void xPlayer::playLine(TLine lin) {
-	QPixmap pxm(size().width(),size().height());
-	if (QFile::exists(lin.imgpath)) {
-		pxm.load(lin.imgpath);
-		pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
-	} else {
-		pxm.fill(Qt::black);
-	}
-	int w = pxm.width();
-	int h = pxm.height();
-	setFixedSize(w, h);
+bool xPlayer::playLine(TLine lin) {
+	int res = false;
+	QPixmap pxm;
 	QString txt;
+	QPainter pnt;
 	int flag = 0;
+	int w,h;
 	if (lin.trn.text.isEmpty()) {
 		txt = lin.src.text;
 		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
@@ -1953,25 +2027,59 @@ void xPlayer::playLine(TLine lin) {
 		txt = lin.trn.text;
 		flag = Qt::TextWordWrap;
 	}
-	QPainter pnt(&pxm);
-	pnt.setFont(fnt);
-	pnt.setPen(Qt::white);
-	QRect rct(0, h-200, w, 200);
-	QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
-	grd.setColorAt(0, QColor(0,0,0,200));
-	grd.setColorAt(1, QColor(0,0,0,120));
-	pnt.fillRect(rct, grd);
-	pnt.drawText(10,h-190, w-20, 180, flag, txt);
-	if (!lin.src.name.isEmpty()) {
-		pnt.fillRect(0,h-240,300,38,QBrush(QColor(1,1,1,200)));
-		if (lin.trn.name.isEmpty()) {
-			pnt.drawText(10,h-238,290,34,0,lin.src.name);
+/*
+	if (lin.type == TL_SELECT) {
+		res = true;
+		pxm = pixmap(Qt::ReturnByValue);
+		flag = 0;
+		w = width();
+		h = height();
+		int x = w * 3 / 10;
+		int y = h / 10 + cnt * 40;
+		int ws = w * 4 / 10;
+		int hs = 38;
+		pnt.begin(&pxm);
+		pnt.setFont(fnt);
+		pnt.setPen(Qt::white);
+		QRect rct(x, y, ws, hs);
+		pnt.fillRect(rct, QColor(0,0,0,200));
+		pnt.drawText(x+3, y+3, ws-6, hs-6, 0, txt);
+		pnt.end();
+		cnt++;
+	} else {
+*/
+//		cnt = 0;
+		pxm = QPixmap(size().width(),size().height());
+		if (QFile::exists(lin.imgpath)) {
+			pxm.load(lin.imgpath);
+			pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
 		} else {
-			pnt.drawText(10,h-238,290,34,0,lin.trn.name);
+			pxm.fill(Qt::black);
 		}
-	}
-	pnt.end();
+		w = pxm.width();
+		h = pxm.height();
+		setFixedSize(w, h);
+		pnt.begin(&pxm);
+		pnt.setFont(fnt);
+		pnt.setPen(Qt::white);
+		QRect rct(0, h-200, w, 200);
+		QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
+		grd.setColorAt(0, QColor(0,0,0,200));
+		grd.setColorAt(1, QColor(0,0,0,120));
+		pnt.fillRect(rct, grd);
+		pnt.drawText(10,h-190, w-20, 180, flag, txt);
+		if (!lin.src.name.isEmpty()) {
+			pnt.fillRect(0,h-240,300,38,QBrush(QColor(1,1,1,200)));
+			if (lin.trn.name.isEmpty()) {
+				pnt.drawText(10,h-238,290,34,0,lin.src.name);
+			} else {
+				pnt.drawText(10,h-238,290,34,0,lin.trn.name);
+			}
+		}
+		pnt.end();
+//	}
 	setPixmap(pxm);
+	return res;
 }
 
 void xPlayer::mousePressEvent(QMouseEvent *ev) {
