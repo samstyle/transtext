@@ -23,7 +23,8 @@ SOURCES += main.cpp mainwin.cpp snx.cpp ks.cpp srp.cpp tbmodel.cpp \
     enm.cpp \
     eagls.cpp \
     replace.cpp \
-    trb.cpp
+    trb.cpp \
+    xplayer.cpp
 RESOURCES += resources.qrc
 
 DISTFILES +=

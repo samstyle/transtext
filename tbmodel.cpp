@@ -46,6 +46,8 @@ QVariant TBModel::data(const QModelIndex& idx, int role) const {
 				case 4: res = curPage->text.at(idx.row()).trn.text; break;
 			}
 			break;
+		default:
+			break;
 	}
 	return res;
 }
@@ -76,6 +78,5 @@ QVariant TBModel::headerData(int sect,Qt::Orientation orien, int role) const {
 }
 
 QModelIndex TBModel::index(int row, int column, const QModelIndex&) const {
-	QModelIndex res = createIndex(row, column, (void*)this);
-	return res;
+	return createIndex(row, column, (void*)this);
 }

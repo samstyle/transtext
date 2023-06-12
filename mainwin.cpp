@@ -77,7 +77,6 @@ MWindow::MWindow() {
 	connect(ui.tree, SIGNAL(itemChanged(QTreeWidgetItem*, int)),this,SLOT(treeItemChanged(QTreeWidgetItem*)));
 
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
-	// connect(ui.table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(askBookmark()));
 	connect(ui.table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(play()));
 
 	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
@@ -137,7 +136,7 @@ MWindow::MWindow() {
 	connect(ui.leFind, SIGNAL(textChanged(QString)), this, SLOT(findStr(QString)));
 
 	connect(ui.tbScroll,SIGNAL(clicked(bool)),this,SLOT(findUntrn()));
-	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(setImgDir()));
+	connect(ui.tbImages,SIGNAL(clicked(bool)),this,SLOT(insertImgLine()));
 	connect(ui.tbBookmark,SIGNAL(released()),this,SLOT(bmList()));
 
 	icowin = new QDialog(this);
@@ -525,17 +524,17 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 
 void MWindow::splitName() {
 	QString tx = ui.srcline->text();
-	int pos = tx.indexOf(trUtf8("（"));
+	int pos = tx.indexOf("（");
 	if (pos > 0) {
-		if (tx.endsWith(trUtf8("）"))) {
+		if (tx.endsWith("）")) {
 			// tx.remove(tx.size() - 1, 1);
 			ui.srcname->setText(tx.left(pos));
 			ui.srcline->setText(tx.mid(pos));
 		}
 	} else {
-		pos = tx.indexOf(trUtf8("「"));
+		pos = tx.indexOf("「");
 		if (pos > 0) {
-			if (tx.endsWith(trUtf8("」"))) {
+			if (tx.endsWith("」")) {
 				tx.remove(tx.size() - 1, 1);
 				ui.srcname->setText(tx.left(pos));
 				ui.srcline->setText(tx.mid(pos+1));
@@ -1012,7 +1011,7 @@ void MWindow::changeRow(QItemSelection) {
 	if (row < 0) {
 		setEdit(false);
 		ui.labInfo->clear();
-		ui.labUuid->clear();
+//		ui.labUuid->clear();
 	} else {
 		if ((curPage->text[row].type == TL_TEXT) || (curPage->text[row].type == TL_SELECT)) {
 			ui.srcname->setText(curPage->text[row].src.name);
@@ -1033,7 +1032,7 @@ void MWindow::changeRow(QItemSelection) {
 				if (ui.trnline->hasFocus()) ui.trnname->setFocus();
 			}
 			if (!ui.srcname->text().isEmpty()) {
-				text.prepend(QDialog::trUtf8("「")).prepend(ui.srcname->text()).append(QDialog::trUtf8("」"));
+				text.prepend("「").prepend(ui.srcname->text()).append("」");
 			}
 			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
 			ui.labInfo->setText(QString("%0 / %1").arg(curRow).arg(curPage->text.size()));
@@ -1063,7 +1062,7 @@ void MWindow::changeTrn(QString text) {
 	if (!ui.editGrid->isEnabled()) return;
 	if (!curPage || (curRow < 0)) return;
 	if (curPage->text[curRow].trn.text == text) return;
-	QString oldtext = curPage->text[curRow].src.text;
+	QString oldtext = curPage->text[curRow].trn.text;
 	curPage->text[curRow].trn.text = text;
 	model->updateCell(curRow,4);
 	if (oldtext.isEmpty() ^ text.isEmpty()) {
@@ -1893,14 +1892,19 @@ void xFileTreeWidget::itemChosed(const QModelIndex& idx) {
 
 // player
 
-QString fExists(QString imgdir, QString str) {
-	if (QFile::exists(imgdir + str)) return imgdir + str;
-	str = str.toLower();
-	if (QFile::exists(imgdir + str)) return imgdir + str;
-	str = str.toUpper();
-	if (QFile::exists(imgdir + str)) return imgdir + str;
-	str.clear();
-	return str;
+QStringList fExistsR(QString imgdir, QString str) {
+	QStringList flt;
+	QStringList lst;
+	flt << str;
+	flt << str + ".jpg";
+	flt << str + ".png";
+	flt << str + ".bmp";
+	flt << str + ".gif";
+	QDirIterator it(imgdir, flt, QDir::NoFilter, QDirIterator::Subdirectories);
+	while (it.hasNext()) {
+		lst << it.next();
+	}
+	return lst;
 }
 
 void fillImages(TPage* pg, QString imgdir) {
@@ -1909,7 +1913,7 @@ void fillImages(TPage* pg, QString imgdir) {
 	int cnt = pg->text.size();
 	int i;
 	QString txt;
-	QString ximg;
+	QStringList ximglist;
 	for (i = 0; i < cnt; i++) {
 		txt = pg->text[i].src.text;
 		txt.remove(" ");
@@ -1918,19 +1922,18 @@ void fillImages(TPage* pg, QString imgdir) {
 		} else if (txt.startsWith("[")) {
 			if (txt.startsWith("[BG:")) {
 				img = txt.mid(4);
-			} else if (txt.startsWith("[BGX:")) {
+			} else if (txt.startsWith("[BGX:") || (txt.startsWith("[MOV:"))) {
 				img = txt.mid(5);
+			} else if (txt.startsWith("BigBG:")) {
+				img = txt.mid(7);
 			} else {
 				img = txt.mid(1);
 			}
 			img.remove("]");
-			img.prepend("/");
-			// img.prepend(imgdir);
-			ximg = fExists(imgdir, img);
-			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".jpg");
-			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".png");
-			if (ximg.isEmpty()) ximg = fExists(imgdir, img + ".bmp");
-			img = ximg;
+			ximglist = fExistsR(imgdir, img);
+			if (!ximglist.isEmpty()) {
+				img = ximglist.first();
+			}
 			pg->text[i].imgpath = img;
 		} else {
 			pg->text[i].imgpath = img;
@@ -1969,12 +1972,9 @@ void MWindow::play() {
 		itm = itm->parent();
 	}
 	player->setWindowTitle(nam);
-
 	imgdir = getImgDir(curItem);
-
-//	itm = curItem;
-
 	fillImages(curPage, imgdir);
+	player->reset();
 	player->playLine(curPage->text[curRow]);
 	player->show();
 }
@@ -2005,100 +2005,3 @@ void MWindow::fontSelect() {
 	}
 }
 
-xPlayer::xPlayer(QWidget* p):QLabel(p) {
-	setWindowModality(Qt::ApplicationModal);
-	fnt.setPixelSize(32);
-	fnt.setFamily("Buxton Sketch");
-	setFixedSize(1280,720);
-	cnt = 0;
-}
-
-bool xPlayer::playLine(TLine lin) {
-	int res = false;
-	QPixmap pxm;
-	QString txt;
-	QPainter pnt;
-	int flag = 0;
-	int w,h;
-	if (lin.trn.text.isEmpty()) {
-		txt = lin.src.text;
-		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
-	} else {
-		txt = lin.trn.text;
-		flag = Qt::TextWordWrap;
-	}
-/*
-	if (lin.type == TL_SELECT) {
-		res = true;
-		pxm = pixmap(Qt::ReturnByValue);
-		flag = 0;
-		w = width();
-		h = height();
-		int x = w * 3 / 10;
-		int y = h / 10 + cnt * 40;
-		int ws = w * 4 / 10;
-		int hs = 38;
-		pnt.begin(&pxm);
-		pnt.setFont(fnt);
-		pnt.setPen(Qt::white);
-		QRect rct(x, y, ws, hs);
-		pnt.fillRect(rct, QColor(0,0,0,200));
-		pnt.drawText(x+3, y+3, ws-6, hs-6, 0, txt);
-		pnt.end();
-		cnt++;
-	} else {
-*/
-//		cnt = 0;
-		pxm = QPixmap(size().width(),size().height());
-		if (QFile::exists(lin.imgpath)) {
-			pxm.load(lin.imgpath);
-			pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
-		} else {
-			pxm.fill(Qt::black);
-		}
-		w = pxm.width();
-		h = pxm.height();
-		setFixedSize(w, h);
-		pnt.begin(&pxm);
-		pnt.setFont(fnt);
-		pnt.setPen(Qt::white);
-		QRect rct(0, h-200, w, 200);
-		QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
-		grd.setColorAt(0, QColor(0,0,0,200));
-		grd.setColorAt(1, QColor(0,0,0,120));
-		pnt.fillRect(rct, grd);
-		pnt.drawText(10,h-190, w-20, 180, flag, txt);
-		if (!lin.src.name.isEmpty()) {
-			pnt.fillRect(0,h-240,300,38,QBrush(QColor(1,1,1,200)));
-			if (lin.trn.name.isEmpty()) {
-				pnt.drawText(10,h-238,290,34,0,lin.src.name);
-			} else {
-				pnt.drawText(10,h-238,290,34,0,lin.trn.name);
-			}
-		}
-		pnt.end();
-//	}
-	setPixmap(pxm);
-	return res;
-}
-
-void xPlayer::mousePressEvent(QMouseEvent *ev) {
-	if (ev->button() == Qt::LeftButton) {
-		emit clicked();
-	}
-}
-
-void xPlayer::wheelEvent(QWheelEvent* ev) {
-	if (ev->angleDelta().y() < 0) {
-		emit clicked();
-	} else if (ev->angleDelta().y() > 0) {
-		emit clicked_r();
-	}
-}
-
-void xPlayer::keyPressEvent(QKeyEvent *ev) {
-	switch(ev->key()) {
-		case Qt::Key_Return: emit clicked(); break;
-		case Qt::Key_Escape: close(); break;
-	}
-}

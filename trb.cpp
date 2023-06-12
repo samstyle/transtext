@@ -206,7 +206,8 @@ int TRBLoader::v7_load_page() {
 						bm.row = page.text.size();
 						addBookmark(bm);
 					}
-					lin.src.text.remove(QObject::trUtf8("　"));
+					if (lin.src.text.startsWith("[BigBG")) lin.type = TL_TEXT;
+					lin.src.text.remove("　");
 					normLine(lin);
 					if ((lin.type == TL_TEXT) && (lin.src.text.toLower() == "[select]")) {
 						issel = true;

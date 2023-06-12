@@ -67,15 +67,21 @@ class xPlayer : public QLabel {
 	public:
 		xPlayer(QWidget* = nullptr);
 		bool playLine(TLine);
+		void reset();
 		QFont fnt;
 	signals:
 		void clicked();
 		void clicked_r();
 	private:
 		int cnt;
+		QMovie* mov;		// player for bg image
+		QPixmap ovr;		// overlay with text
+		QString curimgpath;	// current image file
 		void mousePressEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);
+	private slots:
+		void frameChanged();
 };
 
 class MWindow : public QMainWindow {

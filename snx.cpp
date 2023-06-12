@@ -18,7 +18,7 @@ int get4(QFile& file) {
 	return res;
 }
 
-TPage loadSNX(QString fname, int cpage) {
+TPage loadSNX(QString fname, int) {
 	TPage page;
 	QFile file(fname);
 	if (!file.open(QFile::ReadOnly)) return page;

@@ -78,45 +78,45 @@ void normLine(TLine& line) {
 	QStringList pair;
 	int pos;
 	line.src.text.remove("\n");
-	line.src.name.remove(QObject::trUtf8("　"));
-	line.src.text.remove(QObject::trUtf8("　"));
+	line.src.name.remove("　");
+	line.src.text.remove("　");
 	pair.clear();
 	pair.append(line.src.name);
 	pair.prepend(line.src.text);
 	if (line.src.name == "") {
-		if (line.src.text.endsWith(QObject::trUtf8("」"))) {
-			pair = splitLine(line.src.text,QObject::trUtf8("「"));
+		if (line.src.text.endsWith("」")) {
+			pair = splitLine(line.src.text, "「");
 			line.src.name = pair.first();
 			line.src.text = pair.last();
-			line.src.text.remove(QObject::trUtf8("「"));
-			line.src.text.remove(QObject::trUtf8("」"));
+			line.src.text.remove("「");
+			line.src.text.remove("」");
 		}
-		if (line.src.text.endsWith(QObject::trUtf8("）"))) {
-			pos = line.src.text.indexOf(QObject::trUtf8("（"));
+		if (line.src.text.endsWith("）")) {
+			pos = line.src.text.indexOf("（");
 			if ((pos > 0) && (pos < 10)) {
-				pair = splitLine(line.src.text,QObject::trUtf8("（"));
+				pair = splitLine(line.src.text, "（");
 				line.src.name = pair.first();
-				line.src.text = pair.last().prepend(QObject::trUtf8("（"));
+				line.src.text = pair.last().prepend("（");
 			}
 		}
-		if (line.src.text.indexOf(QObject::trUtf8("\t")) != -1) {
-			pair = splitLine(line.src.text,QObject::trUtf8("\t"));
+		if (line.src.text.indexOf("\t") != -1) {
+			pair = splitLine(line.src.text, "\t");
 			line.src.name = pair.first();
 			line.src.text = pair.last();
 		}
-		if (line.src.text.startsWith(QObject::trUtf8("【"))) {
-			int idx = line.src.text.indexOf(QObject::trUtf8("】"));
+		if (line.src.text.startsWith("【")) {
+			int idx = line.src.text.indexOf("】");
 			if (idx != -1) {
 				line.src.name = line.src.text.mid(1,idx-1);
 				line.src.text = line.src.text.mid(idx+1);
 			}
 		}
-		line.src.name.remove(QObject::trUtf8("【"));
-		line.src.name.remove(QObject::trUtf8("】"));
+		line.src.name.remove("【");
+		line.src.name.remove("】");
 	}
 
 	if (line.trn.name == "") {
-		pair = splitLine(line.trn.text,QObject::trUtf8("\t"));
+		pair = splitLine(line.trn.text, "\t");
 		line.trn.name = pair.first();
 		line.trn.text = pair.last();
 	}
@@ -280,8 +280,8 @@ TPage loadAbelsoft(QString fnam, int) {
 					}
 				} else {
 					if (!name.isEmpty()) {
-						if (line.startsWith(QObject::trUtf8("「"))) line.remove(0,1);
-						if (line.endsWith(QObject::trUtf8("」"))) line.resize(line.length() - 1);
+						if (line.startsWith("「")) line.remove(0,1);
+						if (line.endsWith("」")) line.resize(line.length() - 1);
 					}
 
 					tlin.src.name = name;

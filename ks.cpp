@@ -115,7 +115,7 @@ TPage loadKS(QString fnam, int cpage) {
 		line.remove("\r");
 		line.remove("\n");
 		line.remove("\t");
-		line.remove(QDialog::trUtf8("　"));
+		line.remove("　");
 		tlin.src.text.clear();
 		while(line.size() > 0) {
 			if (line.startsWith(";")) {
@@ -140,7 +140,7 @@ TPage loadKS(QString fnam, int cpage) {
 							nlin.src.text = QString("[BG:%0]").arg(submap["f.bgNow"]);
 							page.text.append(nlin);
 						}
-					} else if (param.com == QDialog::trUtf8("名前")) {
+					} else if (param.com == "名前") {
 						tlin.src.name = param.pars["id"];
 					} else if ((param.com == "cg_i") || (param.com == "cg_a") || (param.com == "image")) {
 						page.text.append(elin);
@@ -150,7 +150,7 @@ TPage loadKS(QString fnam, int cpage) {
 						page.text.append(elin);
 						nlin.src.text = QString("[BGX:%0]").arg(param.pars["storage"]);
 						page.text.append(nlin);
-					} else if (param.com == QDialog::trUtf8("イベント")) {
+					} else if (param.com == "イベント") {
 						nlin.src.text = QString("[BGX:%0]").arg(param.pars["file"]);
 						page.text.append(elin);
 						page.text.append(nlin);
@@ -167,7 +167,7 @@ TPage loadKS(QString fnam, int cpage) {
 							page.text.append(elin);
 							page.text.append(nlin);
 						}
-					} else if (param.com == QDialog::trUtf8("背景")) {
+					} else if (param.com == "背景") {
 						nlin.src.text = QString("[BG:%0]").arg(param.pars["file"]);
 						page.text.append(elin);
 						page.text.append(nlin);
@@ -178,7 +178,7 @@ TPage loadKS(QString fnam, int cpage) {
 						nlin.src.name = param.pars["target"];
 					} else if (param.com.startsWith("CH_NAME") || (param.com == "cn")) {
 						tlin.src.name = param.pars["name"];
-						if (tlin.src.name == QObject::trUtf8("ト書き")) tlin.src.name.clear();
+						if (tlin.src.name == "ト書き") tlin.src.name.clear();
 					} else if (param.com == "NAME_M") {
 						tlin.src.name = param.pars["n"];
 					} else if ((param.com == "FAID_IN") || (param.com == "TR")) {
@@ -225,10 +225,10 @@ TPage loadKS(QString fnam, int cpage) {
 						nlin.src.name.clear();
 						nlin.src.text = QString("[BG:%0]").arg(param.pars["storage"]);
 						page.text.append(nlin);
-					} else if (param.com == QDialog::trUtf8("「")) {
-						line.prepend(QDialog::trUtf8("「"));
-					} else if (param.com == QDialog::trUtf8("（")) {
-						line.prepend(QDialog::trUtf8("（"));
+					} else if (param.com == "「") {
+						line.prepend("「");
+					} else if (param.com == "（") {
+						line.prepend("（");
 					} else if (param.com.startsWith("m") && !param.com.startsWith("mw") && (param.pars.size() == 0)) {
 						tlin.src.name = param.com.mid(1);
 					} else if (param.com == "ns") {
@@ -243,7 +243,7 @@ TPage loadKS(QString fnam, int cpage) {
 							line.remove("\r");
 							line.remove("\n");
 							line.remove("\t");
-							line.remove(QDialog::trUtf8("　"));
+							line.remove("　");
 						}
 					//} else if (param.pars.isEmpty() && !line.isEmpty()) {
 					//	if (param.com.contains(QDialog::trUtf8("/"))) {
@@ -283,7 +283,7 @@ TPage loadKS(QString fnam, int cpage) {
 					page.text.append(nlin);
 				} else if (param.com == "name") {
 					tlin.src.name = param.pars["chara"];
-					if (tlin.src.name == QDialog::trUtf8("地")) tlin.src.name.clear();
+					if (tlin.src.name == "地") tlin.src.name.clear();
 				} else if (param.com == "jump") {
 					nlin.src.text = QString("[jump %0:%1]").arg(param.pars["storage"]).arg(param.pars["target"]);
 					page.text.append(nlin);
@@ -335,7 +335,7 @@ TPage loadKS(QString fnam, int cpage) {
 			}
 		}
 		if (!tlin.src.text.isEmpty()) {
-			if (tlin.src.text.startsWith(QDialog::trUtf8("「")) && tlin.src.text.endsWith(QDialog::trUtf8("」"))) {
+			if (tlin.src.text.startsWith("「") && tlin.src.text.endsWith("」")) {
 				tlin.src.text = tlin.src.text.mid(1, tlin.src.text.size() - 2);
 			}
 			tlin.src.name.remove("【");

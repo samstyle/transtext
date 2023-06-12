@@ -209,20 +209,20 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 		int pos = line.indexOf("\"");
 		if (pos > 0) line = line.mid(pos + 1);
 		tlin.src.name = *name;
-		tlin.src.name.remove(QObject::trUtf8("　"));
-		tlin.src.name.replace(":NameSuffix",QObject::trUtf8("俺"));
+		tlin.src.name.remove("　");
+		tlin.src.name.replace(":NameSuffix", "俺");
 		tlin.src.name = tlin.src.name.split(",").first();
 		name->clear();
 		pos = line.indexOf("\"");
 		if (pos > 0) {
 			tlin.src.text = line.left(pos);
-			if (tlin.src.text.startsWith(QObject::trUtf8("「")) && tlin.src.text.endsWith(QObject::trUtf8("」"))) {
+			if (tlin.src.text.startsWith("「") && tlin.src.text.endsWith("」")) {
 				tlin.src.text.remove(0,1);
 				tlin.src.text.remove(tlin.src.text.size()-1,1);
 			}
 			tlin.src.text.remove("(e)");
 			tlin.type = TL_TEXT;
-			tlin.src.text.remove(QObject::trUtf8("　"));
+			tlin.src.text.remove("　");
 			page->text.append(tlin);
 			line = line.mid(pos + 1);
 		}
@@ -230,7 +230,7 @@ void parseEAGLine(QString line, TPage* page, QString* name) {
 	}
 }
 
-TPage loadEAGLS(QString fnam, int cpage) {
+TPage loadEAGLS(QString fnam, int) {
 	TPage page;
 	QFile file(fnam);
 	if (!file.open(QFile::ReadOnly)) return page;
