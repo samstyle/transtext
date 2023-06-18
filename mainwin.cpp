@@ -1887,7 +1887,7 @@ void xFileTreeWidget::itemChosed(const QModelIndex& idx) {
 	QFileInfo inf = model->fileInfo(idx);
 	QString relpath = model->rootDirectory().relativeFilePath(inf.filePath());
 	emit s_selected(relpath);
-	close();
+//	close();
 }
 
 // player
@@ -1933,6 +1933,8 @@ void fillImages(TPage* pg, QString imgdir) {
 			ximglist = fExistsR(imgdir, img);
 			if (!ximglist.isEmpty()) {
 				img = ximglist.first();
+			} else {
+				img.clear();
 			}
 			pg->text[i].imgpath = img;
 		} else {

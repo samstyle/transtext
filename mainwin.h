@@ -77,6 +77,7 @@ class xPlayer : public QLabel {
 		QMovie* mov;		// player for bg image
 		QPixmap ovr;		// overlay with text
 		QString curimgpath;	// current image file
+		TLine lin;
 		void mousePressEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);

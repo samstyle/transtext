@@ -15,99 +15,65 @@ void xPlayer::reset() {
 	curimgpath.clear();
 }
 
-bool xPlayer::playLine(TLine lin) {
+bool xPlayer::playLine(TLine _l) {
 	int res = false;
-	QPixmap pxm;
-	QString txt;
-	QPainter pnt;
-	int flag = 0;
-	int w,h;
-	if (lin.trn.text.isEmpty()) {
-		txt = lin.src.text;
-		flag = Qt::TextWordWrap | Qt::TextWrapAnywhere;
-	} else {
-		txt = lin.trn.text;
-		flag = Qt::TextWordWrap;
-	}
-/*
-	if (lin.type == TL_SELECT) {
-		res = true;
-		pxm = pixmap(Qt::ReturnByValue);
-		flag = 0;
-		w = width();
-		h = height();
-		int x = w * 3 / 10;
-		int y = h / 10 + cnt * 40;
-		int ws = w * 4 / 10;
-		int hs = 38;
-		pnt.begin(&pxm);
-		pnt.setFont(fnt);
-		pnt.setPen(Qt::white);
-		QRect rct(x, y, ws, hs);
-		pnt.fillRect(rct, QColor(0,0,0,200));
-		pnt.drawText(x+3, y+3, ws-6, hs-6, 0, txt);
-		pnt.end();
-		cnt++;
-	} else {
-*/
-//		cnt = 0;
-		if (curimgpath != lin.imgpath) {
-			curimgpath = lin.imgpath;
-			if (!curimgpath.isEmpty() && QFile::exists(curimgpath)) {
-				mov->stop();
-				mov->setFileName(curimgpath);
-				mov->start();
-				pxm = mov->currentPixmap(); //.scaled(1280, 720, Qt::KeepAspectRatio);
-			} else {
-				pxm = QPixmap(size());
-				pxm.fill(Qt::black);
-			}
-			w = pxm.width();
-			h = pxm.height();
-			setFixedSize(w, h);
-			// mov->setScaledSize(size());
+	lin = _l;
+	if (curimgpath != lin.imgpath) {
+		curimgpath = lin.imgpath;
+		if (!curimgpath.isEmpty() && QFile::exists(curimgpath)) {
+			mov->stop();
+			mov->setFileName(curimgpath);
+			mov->start();
 		} else {
-			w = width();
-			h = height();
-			if (mov->state() != QMovie::Running)
-				mov->start();
+			reset();
 		}
-		qDebug() << curimgpath;
-		ovr = QPixmap(w, h);
-		ovr.fill(Qt::transparent);
-		pnt.begin(&ovr);
-		pnt.setFont(fnt);
-		pnt.setPen(Qt::white);
-		QRect rct(0, h-200, w, 200);
-		QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
-		grd.setColorAt(0, QColor(0,0,0,200));
-		grd.setColorAt(1, QColor(0,0,0,120));
-		pnt.fillRect(rct, grd);
-		pnt.drawText(10,h-190, w-20, 180, flag, txt);
-		if (!lin.src.name.isEmpty()) {
-			pnt.fillRect(0,h-240,300,38,QBrush(QColor(1,1,1,200)));
-			if (lin.trn.name.isEmpty()) {
-				pnt.drawText(10,h-238,290,34,0,lin.src.name);
-			} else {
-				pnt.drawText(10,h-238,290,34,0,lin.trn.name);
-			}
-		}
-		pnt.end();
-		frameChanged();
-//	}
+	} else if (mov->state() != QMovie::Running) {
+		mov->start();
+	}
+	qDebug() << curimgpath;
+	frameChanged();
 	return res;
 }
 
 void xPlayer::frameChanged() {
+	QPainter pnt;
+	// frame
 	QPixmap pxm = mov->currentPixmap();
 	if (pxm.isNull() || curimgpath.isEmpty()) {
-		pxm = QPixmap(size());
+		pxm = QPixmap(1280, 720);
 		pxm.fill(Qt::black);
+	} else {
+		pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
 	}
-	QPainter pnt;
+	setFixedSize(pxm.size());
+	// text overlay
+	QString txt;
+	int flag = Qt::TextWordWrap;
+	if (lin.trn.text.isEmpty()) {
+		txt = lin.src.text;
+		flag |= Qt::TextWrapAnywhere;
+	} else {
+		txt = lin.trn.text;
+	}
 	pnt.begin(&pxm);
-	pnt.drawPixmap(0,0,ovr);
+	pnt.setFont(fnt);
+	pnt.setPen(Qt::white);
+	QRect rct(0, height()-200, width(), 200);
+	QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
+	grd.setColorAt(0, QColor(0,0,0,200));
+	grd.setColorAt(1, QColor(0,0,0,120));
+	pnt.fillRect(rct, grd);
+	pnt.drawText(10,height()-190, width()-20, 180, flag, txt);
+	if (!lin.src.name.isEmpty()) {
+		pnt.fillRect(0,height()-240,300,38,QBrush(QColor(1,1,1,200)));
+		if (lin.trn.name.isEmpty()) {
+			pnt.drawText(10,height()-238,290,34,0,lin.src.name);
+		} else {
+			pnt.drawText(10,height()-238,290,34,0,lin.trn.name);
+		}
+	}
 	pnt.end();
+	// draw result
 	setPixmap(pxm);
 }
 
