@@ -29,6 +29,11 @@ enum {
 	LS_TRN
 };
 
+// line flags
+
+#define TF_SELECT	1
+#define TF_SELITEM	(1<<1)
+
 // ver7 tags
 
 #define TPART	1

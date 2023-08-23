@@ -246,7 +246,6 @@
     <addaction name="separator"/>
     <addaction name="actSaveSrc"/>
     <addaction name="separator"/>
-    <addaction name="actImages"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">

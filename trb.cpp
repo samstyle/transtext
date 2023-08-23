@@ -211,12 +211,17 @@ int TRBLoader::v7_load_page() {
 					normLine(lin);
 					if ((lin.type == TL_TEXT) && (lin.src.text.toLower() == "[select]")) {
 						issel = true;
+						lin.type = TL_SELECT;
+						lin.flag |= TF_SELECT;
+						page.text.append(lin);
 					} else if (issel) {
 						if (lin.src.text.isEmpty()) {
 							issel = false;
+							lin.flag &= ~(TF_SELECT & TF_SELITEM);
 							lin.type = TL_TEXT;
 						} else {
 							lin.type = TL_SELECT;
+							lin.flag |= TF_SELITEM;
 						}
 						page.text.append(lin);
 					} else {

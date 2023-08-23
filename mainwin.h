@@ -66,7 +66,7 @@ class xPlayer : public QLabel {
 	Q_OBJECT
 	public:
 		xPlayer(QWidget* = nullptr);
-		bool playLine(TLine);
+		bool playLine(TPage*, int); // TLine);
 		void reset();
 		QFont fnt;
 	signals:
@@ -78,7 +78,7 @@ class xPlayer : public QLabel {
 		QPixmap ovr;		// overlay with text
 		QString curimgpath;	// current image file
 		TLine lin;
-		void mousePressEvent(QMouseEvent*);
+		void mouseReleaseEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);
 	private slots:
@@ -114,11 +114,11 @@ class MWindow : public QMainWindow {
 		QString prjPath;
 		QClipboard* clip;
 		TBModel* model;
+		QSettings opt;
 
 		QMenu* tbMenu;
 		QMenu* sjMenu;
 		QMenu* bmMenu;
-//		QMenu* imMenu;
 		QMenu* treeMenu;
 
 		void fillBlock(const QList<TLine>*);
@@ -132,8 +132,6 @@ class MWindow : public QMainWindow {
 		void lineUp();
 		void lineDown();
 
-//		void saveLeaf(QTreeWidgetItem*,QBuffer*);
-
 		QString getImgDir(QTreeWidgetItem*);
 		int getCurrentRow();
 		QTreeWidgetItem* getCurrentParent();
@@ -142,12 +140,12 @@ class MWindow : public QMainWindow {
 		TRBLoader trb;
 
 		void loadVer78(QByteArray&, QTreeWidgetItem*);
-//		void loadVer8(QByteArray&, QTreeWidgetItem*);
 	private slots:
 		void treeContextMenu();
 		void tbContextMenu();
 		void jumpLine(QAction*);
 		void findUntrn();
+		void cbrdChanged();
 
 		void play();
 		void playLine();
@@ -159,7 +157,6 @@ class MWindow : public QMainWindow {
 		void findNext();
 		void findPrev();
 
-		void appendCbrd();
 		void changePage();
 		void changeRow(QItemSelection);
 		void changeSrc(QString);

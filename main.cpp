@@ -83,15 +83,14 @@ void normLine(TLine& line) {
 	pair.clear();
 	pair.append(line.src.name);
 	pair.prepend(line.src.text);
-	if (line.src.name == "") {
+	if (line.src.name.isEmpty()) {
 		if (line.src.text.endsWith("」")) {
 			pair = splitLine(line.src.text, "「");
 			line.src.name = pair.first();
 			line.src.text = pair.last();
 			line.src.text.remove("「");
 			line.src.text.remove("」");
-		}
-		if (line.src.text.endsWith("）")) {
+		} else if (line.src.text.endsWith("）")) {
 			pos = line.src.text.indexOf("（");
 			if ((pos > 0) && (pos < 10)) {
 				pair = splitLine(line.src.text, "（");
@@ -115,7 +114,7 @@ void normLine(TLine& line) {
 		line.src.name.remove("】");
 	}
 
-	if (line.trn.name == "") {
+	if (line.trn.name.isEmpty()) {
 		pair = splitLine(line.trn.text, "\t");
 		line.trn.name = pair.first();
 		line.trn.text = pair.last();
@@ -437,6 +436,8 @@ TPage* findPage(QUuid id) {
 
 int main(int ac,char** av) {
 	QApplication app(ac,av);
+	app.setOrganizationName("samstyle");
+	app.setApplicationName("transtext");
 
 	MWindow win;
 	Replacer rpl(&win);

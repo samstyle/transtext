@@ -19,7 +19,9 @@ MWindow::MWindow() {
 	curPage = nullptr;
 	curItem = nullptr;
 	prjPath.clear();
+
 	clip = QApplication::clipboard();
+	connect(clip, &QClipboard::dataChanged, this, &MWindow::cbrdChanged);
 
 	ui.setupUi(this);
 	model = new TBModel;
@@ -79,8 +81,6 @@ MWindow::MWindow() {
 	connect(ui.table->selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),this,SLOT(changeRow(QItemSelection)));
 	connect(ui.table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(play()));
 
-	connect(clip,SIGNAL(dataChanged()),this,SLOT(appendCbrd()));
-
 	treeMenu = new QMenu();
 	treeMenu->addAction(ui.actNewDir);
 	treeMenu->addAction(ui.actNewPage);
@@ -106,6 +106,9 @@ MWindow::MWindow() {
 	connect(ui.actIcon, SIGNAL(triggered()), this, SLOT(changeIcon()));
 	connect(ui.actSetImgDir,SIGNAL(triggered()),this,SLOT(setImgDir()));
 	connect(ui.actRmImgDir,SIGNAL(triggered()),this,SLOT(rmImgDir()));
+
+	connect(ui.actGrabCbrd, &QAction::toggled, ui.tbRec, &QToolButton::setChecked);
+	connect(ui.tbRec, &QToolButton::toggled, ui.actGrabCbrd, &QAction::setChecked);
 
 	tbMenu = new QMenu();
 	sjMenu = tbMenu->addMenu("Labels");
@@ -157,6 +160,7 @@ MWindow::MWindow() {
 	connect(blui.table, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(goToBookmark(const QModelIndex&)));
 
 	player = new xPlayer();
+	player->fnt.fromString(opt.value("player/font").toString());
 	connect(player, SIGNAL(clicked()), this, SLOT(playNext()));
 	connect(player, SIGNAL(clicked_r()), this, SLOT(playPrev()));
 }
@@ -290,20 +294,6 @@ void MWindow::fillSJMenu() {
 //	} else {
 //		ui.actInsertBG->setVisible(false);
 	}
-}
-
-void MWindow::appendCbrd() {
-	if (!ui.actGrabCbrd->isChecked()) return;
-	if (curPage == nullptr) return;
-	QString txt = clip->text();
-	TLine tlin;
-	tlin.type = TL_TEXT;
-	tlin.flag = 0;
-	tlin.src.text = txt;
-	normLine(tlin);
-	curPage->text.append(tlin);
-	changed = 1;
-	model->update();
 }
 
 void MWindow::sortTree() {
@@ -1034,7 +1024,7 @@ void MWindow::changeRow(QItemSelection) {
 			if (!ui.srcname->text().isEmpty()) {
 				text.prepend("「").prepend(ui.srcname->text()).append("」");
 			}
-			if (!ui.actGrabCbrd->isChecked()) clip->setText(text.remove(" "));
+			if (!ui.actGrabCbrd->isChecked() && !ui.tbRec->isChecked()) clip->setText(text.remove(" "));
 			ui.labInfo->setText(QString("%0 / %1").arg(curRow).arg(curPage->text.size()));
 //			ui.labUuid->setText(curPage->text[curRow].picId.toString());
 		} else {
@@ -1369,8 +1359,9 @@ QByteArray loadPrjData(QString path) {
 
 void MWindow::openPrj(QString path) {
 	if (!saveChanged()) return;
-	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
+	if (path == "") path = fdial.getOpenFileName(this,"Open book",opt.value("lastdir","").toString(),"Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
+	opt.setValue("lastdir",QFileInfo(path).dir().absolutePath());
 #if NEW_LOADER
 	prjInit();
 	ui.tree->clear();
@@ -1404,8 +1395,9 @@ void MWindow::openPrj(QString path) {
 }
 
 void MWindow::mergePrj(QString path) {
-	if (path == "") path = fdial.getOpenFileName(this,"Open book","","Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
+	if (path == "") path = fdial.getOpenFileName(this,"Open book",opt.value("lastdir","").toString(),"Book files (*.trb)",nullptr,QFileDialog::DontUseNativeDialog);
 	if (path == "") return;
+	opt.setValue("lastdir",QFileInfo(path).dir().absolutePath());
 #if NEW_LOADER
 	trb.load(path, getCurrentParent());
 	changed = 1;
@@ -1564,11 +1556,12 @@ void MWindow::saveBranch() {
 bool MWindow::savePrj(QString path, QTreeWidgetItem* root) {
 #if NEW_SAVER
 	if (path.isEmpty())
-		path = fdial.getSaveFileName(this,"Save book","","Book files (*.trb)", nullptr, QFileDialog::DontUseNativeDialog);		// prjPath
+		path = fdial.getSaveFileName(this,"Save book",opt.value("lastdir","").toString(),"Book files (*.trb)", nullptr, QFileDialog::DontUseNativeDialog);		// prjPath
 	if (path.isEmpty())
 		return false;
 	if (!path.endsWith(".trb",Qt::CaseInsensitive))
 		path.append(".trb");
+	opt.setValue("lastdir",QFileInfo(path).dir().absolutePath());
 	if (!root)
 		root = ui.tree->invisibleRootItem();
 	trb.save(path, root);
@@ -1854,7 +1847,7 @@ xFileTreeWidget::xFileTreeWidget(QWidget* p):QWidget(p) {
 	lay->addWidget(view);
 	setLayout(lay);
 	model = new QFileSystemModel;
-	model->setNameFilters(QStringList() << "*.jpg" << "*.jpeg" << "*.png" << "*.bmp");
+	model->setNameFilters(QStringList() << "*.jpg" << "*.jpeg" << "*.png" << "*.bmp" << "*.gif");
 	model->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
 	model->setNameFilterDisables(true);
 	model->setReadOnly(true);
@@ -1880,7 +1873,7 @@ void xFileTreeWidget::setDir(QString dir) {
 
 void xFileTreeWidget::itemClick(const QModelIndex& idx, const QModelIndex&) {
 	QFileInfo inf = model->fileInfo(idx);
-	view->setPixmap(QPixmap(inf.filePath()).scaled(400, 300));
+	view->setPixmap(QPixmap(inf.filePath()).scaled(400, 300, Qt::KeepAspectRatio));
 }
 
 void xFileTreeWidget::itemChosed(const QModelIndex& idx) {
@@ -1888,6 +1881,35 @@ void xFileTreeWidget::itemChosed(const QModelIndex& idx) {
 	QString relpath = model->rootDirectory().relativeFilePath(inf.filePath());
 	emit s_selected(relpath);
 //	close();
+}
+
+// cbrd
+
+void MWindow::cbrdChanged() {
+	if (!ui.tbRec->isChecked()) return;
+	if (!curPage) return;
+	if (!clip->mimeData()->hasText()) return;
+	QString txt = clip->text();
+	if (txt.isEmpty()) return;
+	clip->clear();
+	TLine lin;
+	int posa = txt.indexOf("「");
+	int posb = txt.indexOf("（");
+	if (posa >= 0) {
+		lin.src.name = txt.left(posa);
+		lin.src.text = txt.mid(posa + 1);
+		lin.src.text.remove("」");
+	} else if (posb >= 0) {
+		lin.src.name = txt.left(posb);
+		lin.src.text = txt.mid(posb);
+	} else {
+		lin.src.name.clear();
+		lin.src.text = txt;
+	}
+	lin.type = TL_TEXT;
+	curPage->text.append(lin);
+	model->insertRow(curPage->text.size() - 1);
+	ui.table->scrollToBottom();
 }
 
 // player
@@ -1919,12 +1941,12 @@ void fillImages(TPage* pg, QString imgdir) {
 		txt.remove(" ");
 		if (imgdir.isEmpty()) {
 			pg->text[i].imgpath.clear();
-		} else if (txt.startsWith("[")) {
+		} else if (txt.startsWith("[") && !(pg->text[i].flag & TF_SELECT)) {
 			if (txt.startsWith("[BG:")) {
 				img = txt.mid(4);
 			} else if (txt.startsWith("[BGX:") || (txt.startsWith("[MOV:"))) {
 				img = txt.mid(5);
-			} else if (txt.startsWith("BigBG:")) {
+			} else if (txt.startsWith("[BigBG:")) {
 				img = txt.mid(7);
 			} else {
 				img = txt.mid(1);
@@ -1977,7 +1999,7 @@ void MWindow::play() {
 	imgdir = getImgDir(curItem);
 	fillImages(curPage, imgdir);
 	player->reset();
-	player->playLine(curPage->text[curRow]);
+	player->playLine(curPage, curRow); // curPage->text[curRow]);
 	player->show();
 }
 
@@ -1986,8 +2008,8 @@ bool MWindow::playNext() {
 	do {
 		lineDown();
 		lin = curPage->text[curRow];
-	} while ((curRow < (curPage->text.size() - 1)) && (lin.src.text.isEmpty() || lin.src.text.startsWith("[")));
-	return player->playLine(lin);
+	} while ((curRow < (curPage->text.size() - 1)) && (lin.src.text.isEmpty() || (lin.src.text.startsWith("[") && !(lin.flag & TF_SELECT)) || (lin.flag & TF_SELITEM)));
+	return player->playLine(curPage, curRow); // lin);
 }
 
 void MWindow::playPrev() {
@@ -1995,8 +2017,8 @@ void MWindow::playPrev() {
 	do {
 		lineUp();
 		lin = curPage->text[curRow];
-	} while ((curRow > 0) && (lin.src.text.isEmpty() || lin.src.text.startsWith("[")));
-	player->playLine(lin);
+	} while ((curRow > 0) && (lin.src.text.isEmpty() || (lin.src.text.startsWith("[") && !(lin.flag & TF_SELECT)) || (lin.flag & TF_SELITEM)));
+	player->playLine(curPage, curRow); // lin);
 }
 
 void MWindow::fontSelect() {
@@ -2004,6 +2026,7 @@ void MWindow::fontSelect() {
 	QFont fnt = QFontDialog::getFont(&f, player->fnt, this);
 	if (f) {
 		player->fnt = fnt;
+		opt.setValue("player/font", fnt.toString());
 	}
 }
 
