@@ -74,11 +74,17 @@ class xPlayer : public QLabel {
 		void clicked_r();
 	private:
 		int cnt;
+		int moved;
+		QPoint mousepos;
+		QPoint picpos;
+		QSize picsize;
+
 		QMovie* mov;		// player for bg image
 		QPixmap ovr;		// overlay with text
 		QString curimgpath;	// current image file
 		TLine lin;
 		void mouseReleaseEvent(QMouseEvent*);
+		void mouseMoveEvent(QMouseEvent*);
 		void wheelEvent(QWheelEvent*);
 		void keyPressEvent(QKeyEvent*);
 	private slots:

@@ -476,9 +476,6 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 			case Qt::Key_Delete:
 				rowDelete();
 				break;
-			case Qt::Key_Insert:
-				rowInsert(false);
-				break;
 		}
 	} else if (ev->modifiers() & Qt::AltModifier) {
 		switch (ev->key()) {
@@ -507,6 +504,9 @@ void MWindow::keyPressEvent(QKeyEvent* ev) {
 					ui.widFind->hide();
 					ui.table->setFocus();
 				}
+				break;
+			case Qt::Key_Insert:
+				rowInsert(false);
 				break;
 		}
 	}

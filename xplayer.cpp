@@ -7,6 +7,8 @@ xPlayer::xPlayer(QWidget* p):QLabel(p) {
 	setFixedSize(1280,720);
 	cnt = 0;
 	mov = new QMovie;
+	picpos = QPoint(0,0);
+	setMouseTracking(true);
 
 	connect(mov, SIGNAL(frameChanged(int)),this,SLOT(frameChanged()));
 }
@@ -62,17 +64,18 @@ bool xPlayer::playLine(TPage* pg, int ln) { // TLine _l) {
 		}
 	} else {
 		QRect rct(0, height()-200, width(), 200);
+		QRect nrc(0, height()-240, 300, 38);
 		QLinearGradient grd(rct.topLeft(),rct.bottomLeft());
 		grd.setColorAt(0, QColor(0,0,0,200));
 		grd.setColorAt(1, QColor(0,0,0,120));
 		pnt.fillRect(rct, grd);
-		pnt.drawText(10,height()-190, width()-20, 180, flag, txt);
+		pnt.drawText(rct.adjusted(10,10,10,10), flag, txt);
 		if (!lin.src.name.isEmpty()) {
-			pnt.fillRect(0,height()-240,300,38,QBrush(QColor(1,1,1,200)));
+			pnt.fillRect(nrc, QBrush(QColor(1,1,1,200)));
 			if (lin.trn.name.isEmpty()) {
-				pnt.drawText(10,height()-238,290,34,0,lin.src.name);
+				pnt.drawText(nrc.adjusted(5,2,2,5),0,lin.src.name);
 			} else {
-				pnt.drawText(10,height()-238,290,34,0,lin.trn.name);
+				pnt.drawText(nrc.adjusted(5,2,2,5),0,lin.trn.name);
 			}
 		}
 	}
@@ -102,8 +105,17 @@ void xPlayer::frameChanged() {
 	if (pxm.isNull() || curimgpath.isEmpty()) {
 		pxm = QPixmap(size());
 		pxm.fill(Qt::black);
+		picpos = QPoint(0,0);
 	} else {
-		pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio);
+		pxm = pxm.scaled(1280,720,Qt::KeepAspectRatioByExpanding,Qt::SmoothTransformation);
+		picsize = pxm.size();
+		if (pxm.width() * 9 > pxm.height() * 16) {		// wide
+			pxm = pxm.copy(picpos.x(), picpos.y(), pxm.height() * 16 / 9, pxm.height());
+		} else if (pxm.width() * 3 < pxm.height() * 4) {	// tall
+			pxm = pxm.copy(picpos.x(), picpos.y(), pxm.width(), pxm.width() * 9 / 16);
+		} else {
+			pxm = pxm.scaled(1280,720,Qt::KeepAspectRatio,Qt::SmoothTransformation);
+		}
 	}
 	setFixedSize(pxm.size());
 	// draw overlay
@@ -115,8 +127,29 @@ void xPlayer::frameChanged() {
 
 void xPlayer::mouseReleaseEvent(QMouseEvent *ev) {
 	if (ev->button() == Qt::LeftButton) {
-		emit clicked();
+		if (moved) {
+			moved = 0;
+		} else {
+			emit clicked();
+		}
 	}
+}
+
+void xPlayer::mouseMoveEvent(QMouseEvent* ev) {
+	if (ev->buttons() & Qt::LeftButton) {
+		QPoint delta = ev->pos() - mousepos;
+		QPoint newpos = picpos - delta;
+		if (newpos.x() < 0) newpos.setX(0);
+		else if (newpos.x() + width() > picsize.width()) newpos.setX(picsize.width() - width());
+		if (newpos.y() < 0) newpos.setY(0);
+		else if (newpos.y() + height() > picsize.height()) newpos.setY(picsize.height() - height());
+		if (newpos != picpos) {
+			picpos = newpos;
+			frameChanged();
+		}
+		moved = 1;
+	}
+	mousepos = ev->pos();
 }
 
 void xPlayer::wheelEvent(QWheelEvent* ev) {
